@@ -1,0 +1,2280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>群墨 · INK ASSEMBLY — G-AI 多供应商多角色 AI 群聊</title>
+<meta name="description" content="G-AI：Android 原生多供应商、多角色 AI 群聊客户端。让多个 AI 在同一个群里聊天。">
+<style>
+/* ============================================================
+   群墨 · INK ASSEMBLY —— G-AI
+   宣纸 · 墨 · 朱砂 · 金 ｜ 实验第二号
+   ============================================================ */
+:root{
+  --paper:#f4efe3; --paper-2:#faf6ec; --paper-3:#ece4d1;
+  --ink:#1b1610; --ink-2:#4c4335; --ink-3:#8b7f6a;
+  --line:rgba(27,22,16,.16); --line-2:rgba(27,22,16,.34);
+  --cinnabar:#9e3b25; --cinnabar-2:#b04a31; --gold:#a3854f;
+  --serif:'Noto Serif SC','Songti SC','STSong',serif;
+  --en:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --ease:cubic-bezier(.22,1,.36,1);
+  --spring:cubic-bezier(.16,1.3,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+html,body{height:100%}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:var(--serif); font-size:16px; line-height:1.85;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+::selection{background:var(--cinnabar);color:var(--paper-2)}
+body.cursor-on, body.cursor-on *{cursor:none!important}
+
+/* ---------- 宣纸纤维 ---------- */
+body::before{
+  content:''; position:fixed; inset:0; z-index:96; pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.38 0 0 0 0 0.31 0 0 0 0.42 0'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity:.5; mix-blend-mode:multiply;
+}
+
+/* ---------- 画布 / 落墨层 ---------- */
+#ink{position:fixed;inset:0;z-index:0;width:100%;height:100%;display:block;touch-action:none}
+#rain{position:fixed;inset:0;z-index:45;pointer-events:none;overflow:hidden}
+.idrop{position:absolute;top:-46px;pointer-events:none;will-change:transform}
+.idrop i{
+  position:absolute;inset:0;display:block;
+  border-radius:50% 50% 58% 58%/62% 62% 40% 40%;
+  background:radial-gradient(circle at 34% 28%, rgba(74,60,40,.9), rgba(18,14,9,.97) 72%);
+  box-shadow:0 2px 8px rgba(28,22,12,.28);
+}
+.idrop b{
+  position:absolute;left:50%;bottom:calc(100% - 3px);width:2px;height:36px;
+  transform:translateX(-50%);
+  background:linear-gradient(to top, rgba(30,24,14,.55), transparent);
+}
+.splash{position:fixed;z-index:46;pointer-events:none}
+.splash .ring{
+  position:absolute;width:70px;height:70px;margin:-35px;border-radius:50%;
+  border:1.5px solid rgba(27,22,16,.55);
+  animation:ringP .55s var(--ease) forwards;
+}
+.splash .ring.red{border-color:rgba(158,59,37,.6)}
+@keyframes ringP{from{transform:scale(.15);opacity:.9}to{transform:scale(1);opacity:0}}
+.splash .d{
+  position:absolute;width:5px;height:5px;margin:-2.5px;border-radius:50%;
+  background:rgba(27,22,16,.85);
+  transition:transform .62s cubic-bezier(.2,.7,.4,1), opacity .62s ease-out;
+}
+
+/* ---------- 自定义光标 + 暖光跟随 ---------- */
+#cur-glow{
+  position:fixed;z-index:44;width:520px;height:520px;margin:-260px;
+  pointer-events:none;border-radius:50%;opacity:0;
+  background:radial-gradient(circle, rgba(255,238,198,.16), rgba(255,238,198,.05) 42%, transparent 68%);
+  mix-blend-mode:screen;will-change:transform;
+}
+#cur-ring{
+  position:fixed;z-index:200;width:34px;height:34px;margin:-17px;border-radius:50%;
+  border:1.5px solid rgba(27,22,16,.55);pointer-events:none;
+  transition:width .3s var(--ease),height .3s var(--ease),margin .3s var(--ease),
+             border-color .3s,background .3s;will-change:transform;
+}
+#cur-ring.hot{width:52px;height:52px;margin:-26px;border-color:var(--cinnabar);background:rgba(158,59,37,.06)}
+#cur-dot{
+  position:fixed;z-index:201;width:7px;height:7px;margin:-3.5px;border-radius:50%;
+  background:var(--ink);pointer-events:none;will-change:transform;
+}
+#cur-ring.hot + #cur-dot{background:var(--cinnabar)}
+
+/* ---------- 研墨开场 ---------- */
+#loader{
+  position:fixed;inset:0;z-index:300;background:var(--paper);
+  display:grid;place-items:center;cursor:pointer;
+  transition:transform .8s cubic-bezier(.76,0,.22,1);
+}
+#loader::after{
+  content:'';position:absolute;left:0;right:0;bottom:-70px;height:90px;
+  background:linear-gradient(to top, rgba(18,14,9,.9), rgba(18,14,9,.4) 55%, transparent);
+}
+#loader.done{transform:translateY(-102%)}
+.loader-in{position:relative;text-align:center;padding-top:120px}
+.loader-drop{
+  position:absolute;top:6px;left:50%;margin-left:-5px;width:10px;height:15px;
+  border-radius:50% 50% 60% 60%/62% 62% 40% 40%;
+  background:radial-gradient(circle at 34% 28%, rgba(74,60,40,.92), rgba(18,14,9,.97) 72%);
+  animation:ldrop .68s cubic-bezier(.55,0,.85,.5) .2s forwards;
+}
+@keyframes ldrop{to{transform:translateY(96px) scaleY(1.35)}}
+.loader-title{font-size:64px;font-weight:900;letter-spacing:14px;line-height:1;position:relative;display:inline-block}
+.loader-title span{opacity:0;filter:blur(12px);display:inline-block;transition:opacity .5s,filter .5s}
+.loader-title span:nth-child(1){transition-delay:.72s}
+.loader-title span:nth-child(2){transition-delay:.86s}
+#loader.go .loader-title span{opacity:1;filter:blur(0)}
+.loader-title::after{
+  content:'';position:absolute;left:50%;top:58%;width:130px;height:130px;margin:-65px;
+  border:1.5px solid rgba(27,22,16,.5);border-radius:50%;opacity:0;
+  animation:ringP .55s var(--ease) .8s forwards;
+}
+.loader-sub{display:block;margin-top:16px;font-size:12.5px;letter-spacing:6px;color:var(--ink-3);opacity:0;transition:opacity .6s 1s}
+#loader.go .loader-sub{opacity:1}
+.loader-bar{display:block;width:170px;height:2px;margin:18px auto 0;background:var(--line);overflow:hidden;border-radius:2px}
+.loader-bar i{display:block;height:100%;width:0;background:var(--cinnabar);transition:width 1.05s var(--ease) .25s}
+#loader.go .loader-bar i{width:100%}
+
+/* ---------- 卷轴进度 ---------- */
+.progress{position:fixed;right:18px;top:50%;transform:translateY(-50%);z-index:61;height:46vh;width:2px;pointer-events:none}
+.progress .track{position:absolute;inset:0;background:var(--line)}
+.progress #pfill{position:absolute;left:0;top:0;width:100%;height:100%;background:linear-gradient(to bottom, var(--ink), var(--cinnabar));transform:scaleY(0);transform-origin:top}
+.progress #pmark{
+  position:absolute;left:50%;top:0;transform:translate(-50%,-50%);
+  width:20px;height:20px;background:var(--cinnabar);color:#f6efe2;
+  display:grid;place-items:center;font-size:11px;font-weight:700;border-radius:2px;
+  box-shadow:0 2px 8px rgba(120,40,20,.35);
+}
+@media (max-width:900px){.progress{display:none}}
+
+/* ---------- 顶栏 ---------- */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:60;
+  display:flex;align-items:center;gap:22px;
+  padding:14px clamp(18px,4vw,44px);
+  transition:background .5s var(--ease),box-shadow .5s var(--ease);
+}
+.topbar.scrolled{
+  background:rgba(244,239,227,.88);
+  backdrop-filter:blur(14px) saturate(1.1);-webkit-backdrop-filter:blur(14px) saturate(1.1);
+  box-shadow:0 1px 0 var(--line);
+}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink)}
+.brand-seal{
+  width:34px;height:34px;background:var(--cinnabar);color:#f6efe2;
+  display:grid;place-items:center;writing-mode:vertical-rl;text-orientation:upright;
+  font-size:11px;font-weight:700;letter-spacing:1px;line-height:1.15;border-radius:2px;
+  box-shadow:inset 0 0 0 1.5px rgba(246,239,226,.55);transition:transform .5s var(--spring);
+}
+.brand:hover .brand-seal{transform:rotate(-8deg) scale(1.08)}
+.brand b{font-size:17px;font-weight:900;letter-spacing:3px}
+.brand i{font-family:var(--en);font-style:italic;font-size:12.5px;color:var(--ink-3);letter-spacing:.5px}
+.topnav{display:flex;gap:clamp(10px,1.6vw,20px);margin-left:auto;align-items:center}
+.topnav a{font-size:13px;color:var(--ink-2);text-decoration:none;letter-spacing:1.5px;position:relative;padding:4px 0}
+.topnav a::after{
+  content:'';position:absolute;left:0;bottom:0;height:1.5px;width:100%;
+  background:var(--cinnabar);transform:scaleX(0);transform-origin:right;transition:transform .45s var(--ease);
+}
+.topnav a:hover{color:var(--ink)}
+.topnav a:hover::after{transform:scaleX(1);transform-origin:left}
+.top-actions{display:flex;align-items:center;gap:10px;margin-left:8px}
+.btn-notes{
+  width:36px;height:36px;border:1.5px solid var(--line-2);border-radius:50%;
+  background:transparent;color:var(--ink);font-family:var(--serif);
+  font-size:14px;font-weight:700;transition:.35s var(--spring);
+}
+.btn-notes:hover{border-color:var(--cinnabar);color:var(--cinnabar);transform:rotate(10deg) scale(1.08)}
+.btn-mini{
+  font-family:var(--serif);font-size:13px;letter-spacing:1.5px;
+  border:1.5px solid var(--ink);background:var(--ink);color:var(--paper-2);
+  padding:9px 18px;border-radius:99px;text-decoration:none;display:inline-block;
+  position:relative;overflow:hidden;isolation:isolate;transition:color .3s;
+}
+.btn-mini::before{
+  content:'';position:absolute;left:var(--bx,50%);top:var(--by,50%);width:0;height:0;
+  border-radius:50%;background:var(--cinnabar);transform:translate(-50%,-50%);
+  transition:width .5s var(--ease),height .5s var(--ease);z-index:-1;
+}
+.btn-mini:hover::before{width:220px;height:220px}
+
+/* ---------- Hero ---------- */
+.hero{position:relative;z-index:2;height:100vh;min-height:660px;pointer-events:none}
+.hero::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(to top, var(--paper), rgba(244,239,227,0) 20%),
+    radial-gradient(130% 100% at 50% 42%, rgba(244,239,227,0) 55%, rgba(244,239,227,.45) 100%);
+}
+.hero-grid{
+  position:relative;z-index:2;height:100%;max-width:1280px;margin:0 auto;
+  padding:clamp(80px,12vh,120px) clamp(20px,5vw,56px) 120px;
+  display:flex;gap:clamp(20px,4vw,64px);
+}
+.mote{position:absolute;border-radius:50%;background:rgba(27,22,16,.16);pointer-events:none;animation:mote linear infinite}
+@keyframes mote{
+  0%{transform:translate(0,0) scale(1);opacity:0}
+  12%{opacity:.8}
+  50%{transform:translate(calc(var(--sw)*1px),-34vh) scale(.8)}
+  88%{opacity:.5}
+  100%{transform:translate(calc(var(--sw)*-1px),-72vh) scale(.5);opacity:0}
+}
+.hero-left{display:flex;gap:clamp(14px,1.6vw,22px);flex-shrink:0;position:relative;z-index:2}
+.hero-meta{writing-mode:vertical-rl;text-orientation:mixed;display:flex;gap:10px;padding-top:12px}
+.hero-meta span{font-size:12.5px;letter-spacing:5px;color:var(--ink-2);line-height:1;border-right:1px solid var(--line-2);padding-right:10px}
+.hero-meta .en{font-family:var(--en);font-style:italic;letter-spacing:2px;color:var(--ink-3);font-size:13px}
+.hero-title-v{
+  writing-mode:vertical-rl;text-orientation:mixed;
+  font-size:clamp(96px,16vw,200px);font-weight:900;line-height:1;
+  letter-spacing:.04em;color:var(--ink);
+  text-shadow:0 0 34px rgba(244,239,227,.95),0 0 70px rgba(244,239,227,.6);
+  filter:url(#inkEdge);
+}
+.hero-title-v .lite{color:var(--cinnabar)}
+.chr-w{
+  display:inline-block;opacity:0;filter:blur(16px);
+  transform:translateY(-.35em) scale(1.45);
+  transition:opacity .9s var(--spring),filter .9s var(--ease),transform .9s var(--spring);
+  transition-delay:calc(var(--i,0)*.14s + .15s);
+}
+body.loaded .hero .chr-w{opacity:1;filter:blur(0);transform:none}
+.enso{
+  position:absolute;right:clamp(-80px,-4vw,20px);top:46%;transform:translateY(-50%);
+  width:min(560px,58vw);aspect-ratio:1;z-index:1;opacity:.9;pointer-events:none;
+  animation:spin 90s linear infinite;
+}
+@keyframes spin{to{transform:translateY(-50%) rotate(360deg)}}
+.enso path{fill:none;stroke:rgba(27,22,16,.09);stroke-width:11;stroke-linecap:round;stroke-dasharray:1560;stroke-dashoffset:1560;filter:url(#brushStroke)}
+body.loaded .enso path{animation:draw 2.4s var(--ease) .5s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.hero-right{margin-left:auto;align-self:center;max-width:620px;display:flex;flex-direction:column;gap:24px;padding-top:2vh;position:relative;z-index:2}
+.hero-right>*{opacity:0;transform:translateY(22px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
+.hero-right>*:nth-child(1){transition-delay:.55s}
+.hero-right>*:nth-child(2){transition-delay:.7s}
+.hero-right>*:nth-child(3){transition-delay:.85s}
+.hero-right>*:nth-child(4){transition-delay:1s}
+.hero-right>*:nth-child(5){transition-delay:1.15s}
+body.loaded .hero-right>*{opacity:1;transform:none}
+.hero-kicker{display:flex;align-items:center;gap:14px;font-family:var(--en);font-style:italic;font-size:15px;color:var(--cinnabar);letter-spacing:1px}
+.hero-kicker::before{content:'';width:44px;height:1px;background:var(--cinnabar)}
+.hero h1{
+  font-size:clamp(34px,4.8vw,60px);font-weight:900;line-height:1.32;letter-spacing:.02em;
+  text-shadow:0 0 26px rgba(244,239,227,.95),0 0 60px rgba(244,239,227,.55);
+}
+.hero h1 em{font-style:normal;color:var(--cinnabar)}
+.w{
+  display:inline-block;opacity:0;filter:blur(12px);
+  transform:translateY(.45em) scale(1.3);
+  transition:opacity .8s var(--spring),filter .8s var(--ease),transform .8s var(--spring);
+  transition-delay:calc(var(--i,0)*.07s);
+}
+body.loaded .hero .w, .reveal.in .w{opacity:1;filter:blur(0);transform:none}
+.hero-sub{font-size:15.5px;color:var(--ink-2);max-width:520px;line-height:2;text-shadow:0 0 14px rgba(244,239,227,.9)}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap;pointer-events:auto}
+.btn{
+  font-family:var(--serif);font-size:15px;letter-spacing:2px;text-decoration:none;
+  padding:15px 30px;border-radius:4px;display:inline-flex;align-items:center;gap:10px;
+  position:relative;overflow:hidden;isolation:isolate;will-change:transform;
+  transition:box-shadow .45s var(--ease),color .3s,border-color .3s;
+}
+.btn::before{
+  content:'';position:absolute;left:var(--bx,50%);top:var(--by,50%);width:0;height:0;
+  border-radius:50%;background:var(--cinnabar);transform:translate(-50%,-50%);
+  transition:width .55s var(--ease),height .55s var(--ease);z-index:-1;
+}
+.btn:hover::before{width:380px;height:380px}
+.btn-primary{background:var(--ink);color:var(--paper-2);border:1.5px solid var(--ink);box-shadow:4px 4px 0 rgba(27,22,16,.15)}
+.btn-primary:hover{box-shadow:7px 8px 0 rgba(27,22,16,.18)}
+.btn-ghost{background:rgba(250,246,236,.55);color:var(--ink);border:1.5px solid var(--line-2);backdrop-filter:blur(6px)}
+.btn-ghost::before{background:var(--ink)}
+.btn-ghost:hover{color:var(--paper-2);border-color:var(--ink)}
+.btn-sm{padding:11px 22px;font-size:13.5px}
+.hero-trust{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--ink-3);letter-spacing:1.5px}
+.hero-trust::before{content:'';width:8px;height:8px;background:var(--cinnabar);transform:rotate(45deg);flex-shrink:0}
+.hero-side{
+  position:absolute;right:clamp(14px,3vw,40px);top:50%;transform:translateY(-58%);
+  writing-mode:vertical-rl;text-orientation:mixed;
+  font-family:var(--en);font-style:italic;font-size:13px;letter-spacing:3px;color:var(--ink-3);z-index:2;
+}
+.hero-side b{font-family:var(--serif);font-style:normal;font-weight:600;font-size:15px;letter-spacing:8px;color:var(--ink-2);margin-left:8px}
+.hero-seal{
+  position:absolute;right:clamp(30px,7vw,110px);bottom:clamp(120px,20vh,190px);
+  width:clamp(66px,7.4vw,88px);aspect-ratio:1;
+  background:var(--cinnabar);color:#f6efe2;
+  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;place-items:center;
+  opacity:0;transform:rotate(-16deg) scale(2.5);border-radius:3px;z-index:2;
+  box-shadow:inset 0 0 0 2px rgba(246,239,226,.5),inset 0 0 0 5px var(--cinnabar),inset 0 0 0 6.5px rgba(246,239,226,.35),0 10px 24px -8px rgba(120,40,20,.4);
+  font-weight:700;font-size:clamp(17px,2vw,24px);line-height:1;pointer-events:none;
+}
+body.loaded .hero-seal{animation:stamp .65s cubic-bezier(.2,1.5,.35,1) 1.35s forwards}
+@keyframes stamp{0%{opacity:0;transform:rotate(-16deg) scale(2.5)}70%{opacity:.96;transform:rotate(-4deg) scale(.96)}100%{opacity:.95;transform:rotate(-4deg) scale(1)}}
+.hero-seal span:nth-child(1){grid-area:1/2}.hero-seal span:nth-child(2){grid-area:2/2}
+.hero-seal span:nth-child(3){grid-area:1/1}.hero-seal span:nth-child(4){grid-area:2/1}
+.float-seal{
+  position:absolute;writing-mode:vertical-rl;text-orientation:upright;
+  background:var(--cinnabar);color:#f6efe2;font-size:12px;font-weight:700;
+  letter-spacing:2px;line-height:1.2;padding:8px 5px;border-radius:2px;
+  box-shadow:inset 0 0 0 1.5px rgba(246,239,226,.5);
+  animation:bob 5.5s ease-in-out infinite;pointer-events:none;
+}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-14px) rotate(2deg)}}
+.float-seal.fs1{top:-14px;right:-8px}
+.float-seal.fs2{bottom:60px;left:-26px;animation-delay:1.6s}
+.hero-foot{
+  position:absolute;left:0;right:0;bottom:0;z-index:3;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+  padding:0 clamp(20px,5vw,56px) 26px;pointer-events:none;
+  opacity:0;transition:opacity 1s 1.5s;
+}
+body.loaded .hero-foot{opacity:1}
+.hints{
+  display:flex;align-items:center;gap:0;flex-wrap:wrap;
+  font-size:13px;letter-spacing:1px;color:var(--ink-2);
+  background:rgba(250,246,236,.62);backdrop-filter:blur(8px);
+  border:1px solid var(--line);border-radius:99px;padding:9px 22px;pointer-events:auto;
+}
+.hints b{font-weight:700;color:var(--ink);margin-right:4px}
+.hints .sep{margin:0 13px;color:var(--line-2)}
+.btn-rinse{
+  font-family:var(--serif);border:1.5px solid var(--line-2);background:rgba(250,246,236,.62);
+  backdrop-filter:blur(8px);border-radius:99px;width:42px;height:42px;
+  font-size:15px;font-weight:700;color:var(--ink);margin-left:14px;
+  transition:.5s var(--ease);pointer-events:auto;
+}
+.btn-rinse:hover{border-color:var(--cinnabar);color:var(--cinnabar);transform:rotate(360deg) scale(1.08)}
+.status{
+  font-family:var(--en);font-size:12.5px;letter-spacing:1px;color:var(--ink-3);
+  text-align:right;line-height:1.7;font-variant-numeric:tabular-nums;
+  background:rgba(250,246,236,.58);backdrop-filter:blur(8px);
+  padding:6px 14px;border-radius:99px;border:1px solid var(--line);
+}
+.status b{font-family:var(--serif);color:var(--ink-2)}
+
+/* ---------- 墨语跑马灯 ---------- */
+.marquee{position:relative;z-index:2;background:var(--paper);border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;padding:15px 0}
+.marquee-track{display:flex;width:max-content;animation:mq 36s linear infinite}
+.marquee:hover .marquee-track{animation-play-state:paused}
+@keyframes mq{to{transform:translateX(-50%)}}
+.marquee-track span{display:flex;align-items:center;gap:26px;padding-right:26px;font-size:14px;letter-spacing:3px;color:var(--ink-2);white-space:nowrap}
+.marquee-track .en{font-family:var(--en);font-style:italic;letter-spacing:1.5px;color:var(--ink-3)}
+.marquee-track .dia{width:6px;height:6px;background:var(--cinnabar);transform:rotate(45deg);flex-shrink:0}
+.marquee-track .fx{font-family:var(--en);font-style:italic;font-variant-numeric:tabular-nums;color:var(--ink-3)}
+
+/* ---------- 通用内容层 ---------- */
+main{position:relative;z-index:2;background:var(--paper)}
+.wrap{max-width:1180px;margin:0 auto;padding:clamp(84px,12vh,140px) clamp(20px,5vw,48px);position:relative}
+section{border-top:1px solid var(--line)}
+section:first-of-type{border-top:none}
+.ghost{
+  position:absolute;right:-1%;top:-.55em;z-index:0;
+  font-size:clamp(170px,24vw,360px);font-weight:900;line-height:1;
+  color:transparent;-webkit-text-stroke:1px rgba(27,22,16,.10);
+  pointer-events:none;user-select:none;will-change:transform;
+}
+.chap{position:relative;z-index:1;display:flex;align-items:flex-end;gap:clamp(18px,3vw,36px);margin-bottom:clamp(44px,6vh,68px)}
+.chap-no{
+  writing-mode:vertical-rl;text-orientation:upright;
+  font-size:13px;letter-spacing:6px;color:var(--cinnabar);font-weight:600;
+  border-right:1px solid var(--cinnabar);padding-right:10px;line-height:1;
+  align-self:stretch;display:flex;align-items:center;
+}
+.chap h2{font-size:clamp(36px,4.6vw,56px);font-weight:900;line-height:1.2;letter-spacing:.04em}
+.chap h2 small{display:block;font-family:var(--en);font-style:italic;font-weight:500;font-size:clamp(14px,1.5vw,17px);letter-spacing:3px;color:var(--ink-3);margin-top:8px}
+.chap-lead{margin-left:auto;max-width:320px;font-size:14px;color:var(--ink-3);line-height:2;padding-bottom:6px}
+@media (max-width:820px){.chap{flex-wrap:wrap}.chap-lead{margin-left:0;max-width:none}}
+.brush-div{display:block;width:min(640px,80%);height:28px;margin:0 auto clamp(40px,6vh,64px);opacity:.55;overflow:visible}
+.brush-div path{
+  fill:none;stroke:var(--ink);stroke-width:4.5;stroke-linecap:round;
+  stroke-dasharray:660;stroke-dashoffset:660;filter:url(#brushStroke);
+  transition:stroke-dashoffset 1.5s var(--ease) .1s;
+}
+.brush-div.in path{stroke-dashoffset:0}
+
+/* ---------- 其一 · 众长 ---------- */
+.virtues{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(16px,2vw,26px);position:relative;z-index:1}
+.vcard{
+  position:relative;background:var(--paper-2);border:1px solid var(--line);
+  padding:clamp(24px,2.6vw,34px) clamp(22px,2.4vw,30px) clamp(26px,2.8vw,36px);
+  transition:border-color .4s,box-shadow .5s var(--ease);
+  transform-style:preserve-3d;will-change:transform;
+}
+.vcard:nth-child(2),.vcard:nth-child(5){transform:translateY(30px)}
+.vcard::before{content:'';position:absolute;top:0;left:0;width:38px;height:3px;background:var(--ink);transition:.5s var(--ease)}
+.vcard::after{
+  content:'';position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .4s;
+  background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,.55), transparent 62%);
+  mix-blend-mode:soft-light;
+}
+.vcard:hover{border-color:var(--line-2);box-shadow:0 24px 50px -22px rgba(27,22,16,.32)}
+.vcard:hover::after{opacity:1}
+.vcard:hover::before{width:100%;background:var(--cinnabar)}
+.v-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+.v-no{font-family:var(--en);font-style:italic;font-size:15px;color:var(--ink-3);letter-spacing:1px}
+.v-glyph{width:30px;height:30px;border:1.5px solid var(--line-2);display:grid;place-items:center;font-size:14px;font-weight:700;color:var(--ink-2);transition:.45s var(--spring)}
+.vcard:hover .v-glyph{border-color:var(--cinnabar);color:var(--cinnabar);transform:rotate(45deg) scale(1.1)}
+.vcard h3{font-size:clamp(19px,1.8vw,22px);font-weight:700;letter-spacing:1px;margin-bottom:10px;line-height:1.5}
+.vcard p{font-size:14px;color:var(--ink-2);line-height:2}
+@media (max-width:920px){.virtues{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:600px){.virtues{grid-template-columns:1fr}.vcard:nth-child(2),.vcard:nth-child(5){transform:none}}
+
+/* ---------- 其二 · 分述 ---------- */
+.chapters{max-width:960px;margin:0 auto;position:relative;z-index:1}
+.chapter{display:grid;grid-template-columns:230px 1fr;gap:clamp(24px,4vw,60px);padding:clamp(36px,5vh,54px) 0;border-top:1px solid var(--line)}
+.chapter:first-child{border-top:none;padding-top:0}
+.chapter:last-child{padding-bottom:0}
+.vol{font-family:var(--en);font-style:italic;font-size:14px;color:var(--cinnabar);letter-spacing:2px;display:block;margin-bottom:8px}
+.ch-head h3{font-size:clamp(21px,2.2vw,26px);font-weight:900;letter-spacing:2px;line-height:1.5}
+.ch-list{list-style:none}
+.ch-list li{display:flex;gap:14px;padding:13px 0;border-bottom:1px dashed var(--line);font-size:14.5px;color:var(--ink-2);line-height:1.95;transition:padding-left .35s var(--ease)}
+.ch-list li:hover{padding-left:8px}
+.ch-list li:last-child{border-bottom:none}
+.ch-list li::before{content:'';flex-shrink:0;width:6px;height:6px;background:var(--cinnabar);opacity:.75;margin-top:13px;transform:rotate(45deg)}
+.ch-list b{color:var(--ink);font-weight:700}
+@media (max-width:760px){.chapter{grid-template-columns:1fr;gap:16px}}
+
+/* ---------- 其三 · 五式 ---------- */
+.modes{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(12px,1.4vw,18px);position:relative;z-index:1;list-style:none}
+.mode{
+  position:relative;background:var(--paper-2);border:1px solid var(--line);
+  padding:26px 20px 24px;display:flex;flex-direction:column;
+  transition:border-color .4s,box-shadow .5s var(--ease);
+  transform-style:preserve-3d;will-change:transform;
+}
+.mode::before{
+  content:attr(data-char);position:absolute;inset:0;display:grid;place-items:center;
+  font-size:112px;font-weight:900;line-height:1;color:transparent;
+  -webkit-text-stroke:1.2px rgba(27,22,16,.13);
+  transform:scale(.88) rotate(-4deg);transition:.6s var(--ease);pointer-events:none;
+}
+.mode:hover::before{transform:scale(1.05) rotate(-7deg);-webkit-text-stroke-color:rgba(158,59,37,.22)}
+.mode>*{position:relative;z-index:1}
+.mode:hover{border-color:var(--line-2);box-shadow:0 24px 48px -24px rgba(27,22,16,.34)}
+.tone{font-size:34px;font-weight:900;color:var(--cinnabar);line-height:1;display:flex;align-items:baseline;gap:8px;margin-bottom:18px}
+.tone small{font-family:var(--en);font-style:italic;font-size:12px;color:var(--ink-3);letter-spacing:1px;font-weight:500}
+.mode h3{font-size:17.5px;font-weight:700;letter-spacing:.5px;line-height:1.55;margin-bottom:8px;min-height:54px}
+.mode .who{font-size:13px;color:var(--ink-2);line-height:1.9;padding-bottom:14px;border-bottom:1px dashed var(--line);margin-bottom:14px;flex-grow:1}
+.dots{display:flex;gap:5px;align-items:center;margin-bottom:6px}
+.dot{width:8px;height:8px;border-radius:50%;border:1.4px solid var(--ink)}
+.dot.on{background:var(--ink)}
+.cost{font-size:12px;color:var(--ink-3);letter-spacing:2px;margin-bottom:14px}
+.scene{font-size:13px;color:var(--ink-2);line-height:1.9;border-top:1px solid var(--line);padding-top:12px}
+.scene::before{content:'宜';font-size:11px;color:var(--cinnabar);border:1px solid var(--cinnabar);padding:1px 4px;margin-right:8px;border-radius:2px}
+@media (max-width:960px){
+  .modes{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:14px;-webkit-overflow-scrolling:touch}
+  .mode{min-width:230px;scroll-snap-align:start}
+}
+
+/* ---------- 其四 · 器质（四数 + 版权页点引线） ---------- */
+.stats{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  border-top:2px solid var(--ink);border-bottom:1px solid var(--line);
+  margin-bottom:clamp(38px,5vh,58px);position:relative;z-index:1;
+}
+.stat{padding:clamp(24px,3vw,36px) 10px clamp(22px,2.8vw,32px);text-align:center;position:relative}
+.stat + .stat{border-left:1px solid var(--line)}
+.stat strong{
+  display:block;font-family:var(--en);font-style:italic;font-weight:500;
+  font-size:clamp(42px,4.8vw,68px);line-height:1;letter-spacing:.01em;
+  transition:color .4s var(--ease),transform .4s var(--ease);
+}
+.stat strong::after{
+  content:'';display:block;width:34px;height:2px;background:var(--cinnabar);
+  margin:12px auto 0;transform:scaleX(0);transition:transform .45s var(--ease);
+}
+.stat span{display:block;margin-top:10px;font-size:12.5px;letter-spacing:3px;color:var(--ink-3)}
+.stat:hover strong{color:var(--cinnabar);transform:translateY(-5px)}
+.stat:hover strong::after{transform:scaleX(1)}
+@media (max-width:640px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stat:nth-child(3){border-left:none}
+  .stat:nth-child(n+3){border-top:1px solid var(--line)}
+}
+.colophon{max-width:880px;margin:0 auto;position:relative;z-index:1}
+.crow{display:flex;align-items:baseline;gap:14px;padding:15px 2px}
+.crow dt{flex-shrink:0;font-size:13.5px;color:var(--ink-3);letter-spacing:3px;transition:color .3s}
+.crow .leader{flex:1;min-width:24px;border-bottom:1.5px dotted var(--line-2);transform:translateY(-4px)}
+.crow dd{flex-shrink:0;max-width:62%;font-size:15px;text-align:right;line-height:1.9;letter-spacing:.3px;color:var(--ink)}
+.crow dd b{font-weight:700}
+.crow dd .en{font-family:var(--en);font-style:italic;color:var(--ink-3);font-size:13px;margin-left:6px;letter-spacing:1px}
+.crow:hover dt{color:var(--cinnabar)}
+.crow .tag{display:inline-block;font-size:12px;border:1px solid var(--line-2);color:var(--ink-2);padding:1px 9px;border-radius:99px;margin:2px 0 2px 6px;letter-spacing:1px}
+@media (max-width:720px){
+  .crow{flex-wrap:wrap;gap:2px 14px}
+  .crow .leader{display:none}
+  .crow dd{max-width:none;text-align:left;flex:1 1 auto}
+}
+
+/* ---------- 其五 · 答问 ---------- */
+.faq{max-width:860px;margin:0 auto;position:relative;z-index:1}
+.qa{border-bottom:1px solid var(--line)}
+.qa summary{list-style:none;display:flex;align-items:center;gap:18px;padding:24px 6px;transition:.3s}
+.qa summary::-webkit-details-marker{display:none}
+.qa-mark{
+  flex-shrink:0;width:34px;height:34px;border:1.5px solid var(--cinnabar);color:var(--cinnabar);
+  display:grid;place-items:center;font-size:14px;font-weight:700;border-radius:2px;transition:.4s var(--spring);
+}
+.qa summary:hover .qa-mark{background:var(--cinnabar);color:var(--paper-2);transform:rotate(-8deg) scale(1.08)}
+.qa summary h4{font-size:16.5px;font-weight:700;letter-spacing:.5px;line-height:1.7;flex-grow:1}
+.qa-x{flex-shrink:0;width:14px;height:14px;position:relative;opacity:.6;transition:.4s var(--ease)}
+.qa-x::before,.qa-x::after{content:'';position:absolute;background:var(--ink);top:50%;left:0;width:100%;height:1.5px;transform:translateY(-50%)}
+.qa-x::after{transform:translateY(-50%) rotate(90deg)}
+.qa[open] .qa-x::after{transform:translateY(-50%) rotate(0deg)}
+.qa[open] .qa-x{transform:rotate(180deg)}
+.qa[open] summary{box-shadow:inset 3px 0 0 var(--cinnabar)}
+.qa-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .5s var(--ease)}
+.qa[open] .qa-body{grid-template-rows:1fr}
+.qa-body>div{overflow:hidden}
+.qa-body p{padding:0 6px 26px 58px;font-size:14.5px;color:var(--ink-2);line-height:2.05;max-width:680px}
+
+/* ---------- 其六 · 联络 ---------- */
+.ccard{
+  max-width:880px;margin:0 auto;background:var(--paper-2);border:1px solid var(--line);
+  border-top:2px solid var(--ink);border-bottom:2px solid var(--ink);
+  padding:clamp(28px,4vw,46px) clamp(24px,4vw,52px);
+  display:flex;align-items:center;gap:clamp(24px,4vw,60px);
+  position:relative;z-index:1;transition:box-shadow .5s var(--ease);
+}
+.ccard:hover{box-shadow:0 26px 60px -30px rgba(27,22,16,.4)}
+.cc-left{display:flex;gap:18px;align-items:center;flex:1;min-width:0}
+.cc-seal{
+  flex-shrink:0;width:54px;height:54px;background:var(--cinnabar);color:#f6efe2;
+  display:grid;place-items:center;writing-mode:vertical-rl;text-orientation:upright;
+  font-size:15px;font-weight:700;letter-spacing:2px;line-height:1.1;border-radius:3px;
+  box-shadow:inset 0 0 0 2px rgba(246,239,226,.5),inset 0 0 0 4.5px var(--cinnabar),inset 0 0 0 6px rgba(246,239,226,.3);
+  transition:.5s var(--spring);
+}
+.ccard:hover .cc-seal{transform:rotate(-6deg) scale(1.06)}
+.cc-left h3{font-size:clamp(20px,2vw,25px);font-weight:900;letter-spacing:2px}
+.cc-left p{font-size:13.5px;color:var(--ink-3);line-height:1.9;margin-top:6px}
+.cc-right{display:flex;flex-direction:column;align-items:flex-end;gap:12px;flex-shrink:0}
+.cc-label{font-size:11.5px;letter-spacing:4px;color:var(--ink-3)}
+.cc-num{
+  font-family:var(--en);font-style:italic;font-weight:500;
+  font-size:clamp(30px,3.6vw,50px);line-height:1;letter-spacing:.02em;transition:.4s;
+}
+.ccard:hover .cc-num{color:var(--cinnabar)}
+@media (max-width:760px){
+  .ccard{flex-direction:column;align-items:stretch}
+  .cc-right{align-items:flex-start}
+}
+
+/* ---------- 其七 · 众流 ---------- */
+.gtags{list-style:none;display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(12px,1.6vw,20px);position:relative;z-index:1}
+.gtag{
+  background:var(--paper-2);border:1px solid var(--line);
+  padding:20px 18px 16px;display:flex;flex-direction:column;gap:10px;
+  position:relative;transition:border-color .4s,transform .45s var(--ease),box-shadow .5s var(--ease);
+}
+.gtag:hover{border-color:var(--cinnabar);transform:translateY(-6px);box-shadow:0 22px 44px -22px rgba(27,22,16,.35)}
+.gtag:focus-visible{outline:2px solid var(--cinnabar);outline-offset:3px}
+.gtag header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.g-seal{
+  background:var(--cinnabar);color:#f6efe2;font-size:12.5px;font-weight:700;
+  letter-spacing:2px;padding:3px 9px;border-radius:2px;
+  box-shadow:inset 0 0 0 1.5px rgba(246,239,226,.4);
+}
+.g-badge{font-size:11px;color:var(--cinnabar);border:1px solid var(--cinnabar);padding:1px 7px;border-radius:99px;letter-spacing:1px;white-space:nowrap}
+.g-num{
+  font-family:var(--en);font-style:italic;font-weight:500;
+  font-size:clamp(22px,2vw,27px);line-height:1.1;letter-spacing:.5px;
+  position:relative;padding-bottom:6px;transition:color .35s;
+}
+.g-num::after{
+  content:'';position:absolute;left:0;bottom:0;height:2px;width:100%;
+  background:currentColor;opacity:0;transform:scaleX(.3);transform-origin:left;
+  transition:.45s var(--ease);
+}
+.gtag:hover .g-num{color:var(--cinnabar)}
+.gtag:hover .g-num::after{opacity:.8;transform:scaleX(1)}
+.g-note{font-size:12.5px;color:var(--ink-3);line-height:1.8;flex-grow:1}
+.g-act{
+  font-size:11px;letter-spacing:2px;color:var(--ink-3);
+  border-top:1px dashed var(--line);padding-top:9px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.g-act::after{content:'';width:6px;height:6px;background:var(--cinnabar);transform:rotate(45deg);opacity:.55;transition:.35s}
+.gtag:hover .g-act{color:var(--cinnabar)}
+.gtag:hover .g-act::after{opacity:1;transform:rotate(225deg) scale(1.2)}
+.g-tip{
+  margin-top:clamp(26px,4vh,40px);text-align:center;font-size:13px;letter-spacing:2px;
+  color:var(--ink-3);position:relative;z-index:1;line-height:2.2;
+}
+.g-tip::before,.g-tip::after{content:'';display:inline-block;width:6px;height:6px;background:var(--cinnabar);transform:rotate(45deg);margin:0 16px;vertical-align:2px;opacity:.7}
+@media (max-width:960px){.gtags{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:480px){.gtags{grid-template-columns:1fr 1fr;gap:10px}.gtag{padding:16px 14px 14px}}
+
+/* ---------- Toast 墨豆 ---------- */
+#toast{
+  position:fixed;left:50%;bottom:38px;transform:translate(-50%,20px);opacity:0;z-index:210;
+  background:var(--ink);color:var(--paper-2);font-family:var(--serif);
+  font-size:13.5px;letter-spacing:2px;padding:11px 22px;border-radius:99px;
+  display:flex;align-items:center;gap:10px;pointer-events:none;
+  transition:opacity .45s var(--spring),transform .45s var(--spring);
+  box-shadow:0 14px 34px -12px rgba(18,14,9,.5);
+}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#toast .t-dot{width:7px;height:7px;background:var(--cinnabar);border-radius:50%;flex-shrink:0}
+
+/* ---------- 页脚 CTA ---------- */
+.cta{position:relative;z-index:2;min-height:92vh;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.cta::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(to bottom, var(--paper), rgba(244,239,227,0) 30%, rgba(244,239,227,0) 70%, var(--paper));
+}
+.cta .enso2{position:absolute;left:50%;top:50%;width:min(620px,80vw);aspect-ratio:1;transform:translate(-50%,-50%);opacity:.85;pointer-events:none;animation:spin2 100s linear infinite}
+@keyframes spin2{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.cta .enso2 path{fill:none;stroke:rgba(158,59,37,.10);stroke-width:10;stroke-linecap:round;stroke-dasharray:1560;stroke-dashoffset:1560;filter:url(#brushStroke)}
+.cta.in .enso2 path{animation:draw 2.6s var(--ease) .3s forwards}
+.cta-inner{position:relative;z-index:2;text-align:center;padding:0 22px;max-width:760px}
+.cta h2{
+  font-size:clamp(34px,5.2vw,60px);font-weight:900;letter-spacing:.04em;line-height:1.4;
+  text-shadow:0 0 28px rgba(244,239,227,.95),0 0 64px rgba(244,239,227,.6);
+}
+.cta h2 em{font-style:normal;color:var(--cinnabar)}
+.cta p{margin:20px auto 34px;font-size:15.5px;color:var(--ink-2);max-width:460px;text-shadow:0 0 12px rgba(244,239,227,.9)}
+.cta .hero-cta{justify-content:center}
+.cta .btn{pointer-events:auto}
+.cta-note{margin-top:26px;font-size:13px;color:var(--ink-3);letter-spacing:1.5px}
+
+footer{position:relative;z-index:2;background:var(--ink);color:#cfc6b4}
+.foot-in{
+  max-width:1180px;margin:0 auto;padding:44px clamp(20px,5vw,48px);
+  display:flex;flex-wrap:wrap;gap:18px 40px;align-items:center;justify-content:space-between;
+  font-size:13px;letter-spacing:1.5px;
+}
+.foot-in .seal-mini{display:inline-grid;place-items:center;width:26px;height:26px;background:var(--cinnabar);color:#f6efe2;font-size:12px;font-weight:700;border-radius:2px;margin-right:10px;vertical-align:-6px}
+.foot-en{font-family:var(--en);font-style:italic;letter-spacing:2px;color:#8f8672}
+.foot-in a{color:#cfc6b4;text-decoration:none;border-bottom:1px solid rgba(207,198,180,.3)}
+.foot-in a:hover{color:#fff;border-color:#fff}
+
+/* ---------- 释文面板 ---------- */
+.notes{position:fixed;inset:0;z-index:98;visibility:hidden;pointer-events:none}
+.notes.open{visibility:visible;pointer-events:auto}
+.notes-mask{position:absolute;inset:0;background:rgba(24,20,14,.44);opacity:0;transition:opacity .55s var(--ease);backdrop-filter:blur(3px)}
+.notes.open .notes-mask{opacity:1}
+.notes-panel{
+  position:absolute;top:0;right:0;bottom:0;width:min(600px,94vw);
+  background:var(--paper-2);border-left:1px solid var(--line-2);
+  transform:translateX(103%);transition:transform .65s var(--ease);
+  box-shadow:-30px 0 80px rgba(24,20,14,.35);overflow-y:auto;overscroll-behavior:contain;
+}
+.notes.open .notes-panel{transform:translateX(0)}
+.notes-head{
+  position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:14px;
+  padding:22px 30px;background:rgba(250,246,236,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+}
+.notes-head h3{font-size:19px;font-weight:900;letter-spacing:3px}
+.notes-head small{font-family:var(--en);font-style:italic;color:var(--ink-3);letter-spacing:2px;font-size:12.5px}
+.btn-close{
+  margin-left:auto;width:38px;height:38px;border:1.5px solid var(--line-2);border-radius:50%;
+  background:transparent;font-family:var(--serif);font-size:14px;font-weight:700;color:var(--ink);transition:.4s var(--ease);
+}
+.btn-close:hover{border-color:var(--cinnabar);color:var(--cinnabar);transform:rotate(180deg)}
+.notes-body{padding:34px 34px 60px}
+.notes-body h4{font-size:15px;font-weight:900;letter-spacing:3px;color:var(--cinnabar);margin:38px 0 14px;display:flex;align-items:center;gap:12px}
+.notes-body h4:first-child{margin-top:0}
+.notes-body h4::after{content:'';flex-grow:1;height:1px;background:var(--line)}
+.notes-body p{font-size:14.5px;line-height:2.15;color:var(--ink-2);margin-bottom:12px;text-align:justify}
+.notes-body .brush{list-style:none;margin-top:6px}
+.notes-body .brush li{display:flex;gap:14px;padding:9px 0;font-size:14.5px;color:var(--ink-2);border-bottom:1px dashed var(--line)}
+.notes-body .brush b{color:var(--ink);font-weight:700;flex-shrink:0}
+.notes-body .brush b i{font-style:normal;color:var(--cinnabar);margin-right:6px}
+.notes-sign{margin-top:44px;text-align:right;font-size:14px;letter-spacing:3px;color:var(--ink-3)}
+.notes-sign b{color:var(--ink);font-weight:700}
+.notes-motto{margin-top:30px;text-align:center;font-size:15px;letter-spacing:4px;color:var(--ink);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:18px 0}
+
+/* ---------- 入场动效 ---------- */
+.reveal{opacity:0;transform:translateY(34px);filter:blur(10px);transition:opacity .9s var(--ease),transform .9s var(--ease),filter .9s var(--ease)}
+.reveal.in{opacity:1;transform:none;filter:blur(0)}
+.d1{transition-delay:.08s}.d2{transition-delay:.16s}.d3{transition-delay:.24s}.d4{transition-delay:.32s}.d5{transition-delay:.4s}.d6{transition-delay:.48s}
+
+@media (max-width:900px){
+  .hero-grid{flex-direction:column;padding-top:96px}
+  .hero-right{margin-left:0;padding-top:20px}
+  .hero-side,.float-seal{display:none}
+  .hero-seal{bottom:auto;top:15vh;right:6vw}
+  .topnav a{display:none}
+  .hero-foot{flex-direction:column;align-items:stretch}
+  .status{text-align:center}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  html{scroll-behavior:auto}
+  .reveal,.chr-w,.w{opacity:1!important;filter:none!important;transform:none!important}
+}
+</style>
+</head>
+<body>
+
+<!-- SVG 滤镜：墨边缘 / 笔锋干擦 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="inkEdge" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.09 0.12" numOctaves="3" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="4.5"/>
+    </filter>
+    <filter id="brushStroke" x="-20%" y="-40%" width="140%" height="180%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.028 0.11" numOctaves="4" seed="11" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="9"/>
+    </filter>
+  </defs>
+</svg>
+
+<!-- 研墨开场 -->
+<div id="loader" aria-hidden="true">
+  <div class="loader-in">
+    <span class="loader-drop"></span>
+    <span class="loader-title"><span>群</span><span>墨</span></span>
+    <span class="loader-sub">研墨 · 备纸 · 起笔</span>
+    <span class="loader-bar"><i></i></span>
+  </div>
+</div>
+
+<canvas id="ink" aria-hidden="true"></canvas>
+<div id="rain" aria-hidden="true"></div>
+<div id="cur-glow" aria-hidden="true"></div>
+<div id="cur-ring" aria-hidden="true"></div>
+<div id="cur-dot" aria-hidden="true"></div>
+<div id="toast" role="status"><span class="t-dot"></span><span id="toastMsg"></span></div>
+
+<div class="progress" aria-hidden="true">
+  <span class="track"></span><span id="pfill"></span><span id="pmark">墨</span>
+</div>
+
+<!-- ══════════ 顶栏 ══════════ -->
+<header class="topbar" id="topbar">
+  <a class="brand" href="#hero">
+    <span class="brand-seal">群墨</span>
+    <b>G-AI</b>
+    <i>ink·assembly</i>
+  </a>
+  <nav class="topnav">
+    <a href="#virtues">众长</a>
+    <a href="#detail">分述</a>
+    <a href="#modes">五式</a>
+    <a href="#spec">器质</a>
+    <a href="#faq">答问</a>
+    <a href="#contact">联络</a>
+    <a href="#community">众流</a>
+  </nav>
+  <div class="top-actions">
+    <button class="btn-notes" id="btnNotes" title="释文 · 关于本页" aria-label="打开释文">释</button>
+    <a class="btn-mini" href="#" id="dlTop">下载 APK</a>
+  </div>
+</header>
+
+<!-- ══════════ Hero ══════════ -->
+<section class="hero" id="hero">
+  <svg class="enso" viewBox="0 0 500 500" aria-hidden="true">
+    <path d="M258 34 C 132 44 42 148 40 258 C 38 372 148 466 264 462 C 372 458 456 376 458 264 C 460 162 384 62 272 44"/>
+  </svg>
+  <div class="hero-grid">
+    <div class="hero-left">
+      <div class="hero-meta">
+        <span class="en">a real-time ink study · for G-AI</span>
+        <span>丙午年 · 冬</span>
+        <span>实验 第二号</span>
+      </div>
+      <h1 class="hero-title-v" aria-label="群墨"><span class="chr-w" style="--i:0">群</span><span class="chr-w lite" style="--i:1">墨</span></h1>
+    </div>
+    <div class="hero-right">
+      <p class="hero-kicker">G-AI · Android Native · Multi-Vendor Group Chat</p>
+      <h1>
+        <span class="w" style="--i:0">让</span><span class="w" style="--i:1">多个</span><span class="w" style="--i:2">AI</span><br>
+        <span class="w" style="--i:3">在</span><em class="w" style="--i:4">同一个群</em><span class="w" style="--i:5">里聊天</span>
+      </h1>
+      <p class="hero-sub">G-AI 是一款多供应商、多角色的 AI 群聊客户端。为每个 AI 创建人物卡，把它们拉进一个群，它们共享同一份对话记忆，像真人一样接话、讨论、互相补充。</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#" id="dlHero" data-mag>下载 APK<span style="font-size:12px;opacity:.75;letter-spacing:1px">Android 8.0+</span></a>
+        <a class="btn btn-ghost" href="#virtues" data-mag>查看功能</a>
+      </div>
+      <p class="hero-trust">纯本地运行 · 无需注册 · 不经过任何第三方服务器</p>
+      <span class="float-seal fs1">众声同席</span>
+    </div>
+  </div>
+  <p class="hero-side"><b>像素之下 · 皆是水波</b>BENEATH THE PIXELS, ALL IS WATER</p>
+  <div class="hero-seal" aria-hidden="true"><span>众</span><span>声</span><span>同</span><span>席</span></div>
+  <div class="hero-foot">
+    <div style="display:flex;align-items:center">
+      <p class="hints">
+        <b>轻移</b>引流<span class="sep">·</span><b>按拖</b>落墨<span class="sep">·</span><b>单击</b>滴墨<span class="sep">·</span><b>双击</b>起涡
+      </p>
+      <button class="btn-rinse" id="btnRinse" title="涤 · 洗纸另起一局">涤</button>
+    </div>
+    <p class="status">落墨 <b id="dropCount">0</b> 滴<br><span id="coord">x 0.000 · y 0.000</span></p>
+  </div>
+</section>
+
+<!-- 墨语跑马灯 -->
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track" id="mqTrack">
+    <span>让多个 AI 同席共话<i class="dia"></i></span>
+    <span>群公共记忆 · 成员私有记忆<i class="dia"></i></span>
+    <span class="fx">∂u/∂t + (u·∇)u = −∇p + ν∇²u<i class="dia"></i></span>
+    <span>三协议原生适配<i class="dia"></i></span>
+    <span class="en">INK ASSEMBLY<i class="dia"></i></span>
+    <span>五式发言 · 宫商角徵羽<i class="dia"></i></span>
+    <span>多群互通 · 免费 API 常更新<i class="dia"></i></span>
+    <span>交流 · QQ 3991921169<i class="dia"></i></span>
+    <span>像素之下 皆是水波<i class="dia"></i></span>
+    <span>纯本地运行 · 无需注册<i class="dia"></i></span>
+  </div>
+</div>
+
+<main>
+  <!-- ══════════ 其一 · 众长 ══════════ -->
+  <section id="virtues">
+    <div class="wrap">
+      <span class="ghost" data-speed="0.06">壹</span>
+      <svg class="brush-div" viewBox="0 0 620 24" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M8 14 C 90 5, 150 19, 240 10 C 330 3, 380 17, 470 9 C 524 5, 566 13, 612 8"/>
+      </svg>
+      <div class="chap reveal">
+        <span class="chap-no">其一</span>
+        <h2>众长<small>SIX VIRTUES</small></h2>
+        <p class="chap-lead">器不炫技，事皆有着落。六件长处，逐一道来。</p>
+      </div>
+      <div class="virtues">
+        <article class="vcard reveal d1" data-tilt>
+          <div class="v-top"><span class="v-no">No.1</span><span class="v-glyph"><span>协</span></span></div>
+          <h3>多供应商自由接入</h3>
+          <p>OpenAI、Claude、Gemini 三协议原生适配，填 Base URL 和 Key 即可用；兼容所有 OpenAI 格式的中转站。</p>
+        </article>
+        <article class="vcard reveal d2" data-tilt>
+          <div class="v-top"><span class="v-no">No.2</span><span class="v-glyph"><span>人</span></span></div>
+          <h3>人物即成员</h3>
+          <p>每张人物卡有头像、名字、System Prompt 和独立模型，可自定义人设；支持 Emoji 头像或相册图片。</p>
+        </article>
+        <article class="vcard reveal d3" data-tilt>
+          <div class="v-top"><span class="v-no">No.3</span><span class="v-glyph"><span>式</span></span></div>
+          <h3>五种发言模式</h3>
+          <p>从「全员必须回复」到「只有被 @ 的才回」，按场景切换讨论氛围与 Token 消耗。</p>
+        </article>
+        <article class="vcard reveal d1" data-tilt>
+          <div class="v-top"><span class="v-no">No.4</span><span class="v-glyph"><span>忆</span></span></div>
+          <h3>双层记忆系统</h3>
+          <p>群共享一份公共记忆，每个成员另有一份私有记忆，互不干扰、独立压缩，越聊越懂彼此。</p>
+        </article>
+        <article class="vcard reveal d2" data-tilt>
+          <div class="v-top"><span class="v-no">No.5</span><span class="v-glyph"><span>调</span></span></div>
+          <h3>管理员智能调度</h3>
+          <p>指定一位「群管理员」，它用原生工具调用点名成员并派发发言任务。</p>
+        </article>
+        <article class="vcard reveal d3" data-tilt>
+          <div class="v-top"><span class="v-no">No.6</span><span class="v-glyph"><span>质</span></span></div>
+          <h3>原生级交互质感</h3>
+          <p>自绘 iOS 风格开关、滑块与胶囊工具栏，多档弹簧动效，长按回弹、消息上浮入场。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ 其二 · 功能分述 ══════════ -->
+  <section id="detail">
+    <div class="wrap">
+      <span class="ghost" data-speed="0.05">贰</span>
+      <svg class="brush-div" viewBox="0 0 620 24" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M10 12 C 100 19, 170 4, 260 12 C 340 19, 400 6, 480 12 C 540 16, 580 8, 610 12"/>
+      </svg>
+      <div class="chap reveal">
+        <span class="chap-no">其二</span>
+        <h2>功能分述<small>IN DETAIL</small></h2>
+        <p class="chap-lead">逐部拆开看：引擎、记忆、协议、搜索、外观与隐私。</p>
+      </div>
+      <div class="chapters">
+        <article class="chapter reveal">
+          <header class="ch-head">
+            <span class="vol">卷一 · ENGINE</span>
+            <h3>群聊引擎</h3>
+          </header>
+          <ul class="ch-list">
+            <li><span><b>五种发言模式</b>：全员必须回复 / 全员选择回复 / 自由讨论（无限轮询）/ 按需发言 / 群主意愿。</span></li>
+            <li><span><b>两种回复节奏</b>：顺序（逐个接话，话题连贯）或同时（并行回复，互不等待）。</span></li>
+            <li><span><b>随时停止</b>：发送键可中止当前正在输入的所有成员，已生成的半截内容保留。</span></li>
+            <li><span><b>@ 提及</b>：任何模式下被 @ 的成员强制优先发言，兼容全角＠。</span></li>
+          </ul>
+        </article>
+        <article class="chapter reveal">
+          <header class="ch-head">
+            <span class="vol">卷二 · MEMORY</span>
+            <h3>记忆与上下文</h3>
+          </header>
+          <ul class="ch-list">
+            <li><span><b>群公共记忆</b>：整个群压缩后共用同一份上下文，所有成员看到的世界一致。</span></li>
+            <li><span><b>成员个人记忆</b>：被 @、主动回复、被分配的任务自动归档，仅该成员可见。</span></li>
+            <li><span><b>触发方式</b>：不启用 / 自动（超阈值自动总结）/ 手动（在 Token 面板触发）；阈值与保留条数均可调。</span></li>
+            <li><span><b>Token 面板</b>：实时估算群聊与每个成员的 Token 占用，超标红色提示。</span></li>
+          </ul>
+        </article>
+        <article class="chapter reveal">
+          <header class="ch-head">
+            <span class="vol">卷三 · PROTOCOL</span>
+            <h3>供应商与模型</h3>
+          </header>
+          <ul class="ch-list">
+            <li><span><b>支持协议</b>：OpenAI 兼容 / Anthropic Claude / Google Gemini。</span></li>
+            <li><span><b>模型能力可勾选</b>：思考档位、视觉、原生联网、视频、工具调用。</span></li>
+            <li><span><b>思考档位三协议适配</b>：中文档（低/中/高）或数字档（如 8192）皆可。</span></li>
+            <li><span><b>一键拉取模型列表</b>；端点支持「自动补全」或「手填完整 URL」。</span></li>
+          </ul>
+        </article>
+        <article class="chapter reveal">
+          <header class="ch-head">
+            <span class="vol">卷四 · SEARCH</span>
+            <h3>联网搜索</h3>
+          </header>
+          <ul class="ch-list">
+            <li><span>基于 Bing 搜索，<b>无需申请 API Key</b>，在输入栏按消息开关。</span></li>
+          </ul>
+        </article>
+        <article class="chapter reveal">
+          <header class="ch-head">
+            <span class="vol">卷五 · AESTHETICS</span>
+            <h3>外观与体验</h3>
+          </header>
+          <ul class="ch-list">
+            <li><span>亮色「暖纸」/ 暗色「墨夜」两套配色，跟随系统或手动指定。</span></li>
+            <li><span>无渐变、无高饱和色，以<b>暖灰纸面 + 墨黑主色</b>构建克制层级。</span></li>
+            <li><span>流畅动效：多档弹簧规格（回弹/阻尼/果冻弹），消息入场、列表错峰浮现、底栏跟手吸附。</span></li>
+          </ul>
+        </article>
+        <article class="chapter reveal">
+          <header class="ch-head">
+            <span class="vol">卷六 · PRIVACY</span>
+            <h3>隐私与数据</h3>
+          </header>
+          <ul class="ch-list">
+            <li><span>全部数据存于手机本地（Room 数据库），<b>不上传云端、不做账号体系</b>。</span></li>
+            <li><span>可一键清除所有数据。</span></li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ 其三 · 五式发言 ══════════ -->
+  <section id="modes">
+    <div class="wrap">
+      <span class="ghost" data-speed="0.07">叁</span>
+      <svg class="brush-div" viewBox="0 0 620 24" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M12 10 C 80 17, 160 5, 250 13 C 330 20, 410 6, 490 12 C 550 16, 585 9, 608 12"/>
+      </svg>
+      <div class="chap reveal">
+        <span class="chap-no">其三</span>
+        <h2>五式发言<small>FIVE VOICES</small></h2>
+        <p class="chap-lead">五种发言模式，各配一段声部——宫商角徵羽，聊什么，用什么。</p>
+      </div>
+      <ol class="modes">
+        <li class="mode reveal d1" data-char="宫" data-tilt>
+          <span class="tone">宫<small>MODE I</small></span>
+          <h3>全员必须回复</h3>
+          <p class="who">全员各说一次</p>
+          <div class="dots" title="Token 消耗：最高"><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span></div>
+          <span class="cost">最高</span>
+          <p class="scene">头脑风暴、多方视角</p>
+        </li>
+        <li class="mode reveal d2" data-char="商" data-tilt>
+          <span class="tone">商<small>MODE II</small></span>
+          <h3>全员选择回复</h3>
+          <p class="who">自行决定是否发言，仅一轮</p>
+          <div class="dots" title="Token 消耗：中"><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span><span class="dot"></span><span class="dot"></span></div>
+          <span class="cost">中</span>
+          <p class="scene">日常讨论</p>
+        </li>
+        <li class="mode reveal d3" data-char="角" data-tilt>
+          <span class="tone">角<small>MODE III</small></span>
+          <h3>自由讨论</h3>
+          <p class="who">循环轮询，想说的继续说，直到无人接话</p>
+          <div class="dots" title="Token 消耗：高（多轮）"><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span><span class="dot on"></span><span class="dot"></span></div>
+          <span class="cost">高（多轮）</span>
+          <p class="scene">深度辩论、连续推演</p>
+        </li>
+        <li class="mode reveal d4" data-char="徵" data-tilt>
+          <span class="tone">徵<small>MODE IV</small></span>
+          <h3>按需发言</h3>
+          <p class="who">管理员点名并派任务</p>
+          <div class="dots" title="Token 消耗：最低"><span class="dot on"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <span class="cost">最低</span>
+          <p class="scene">任务分派、精准提问</p>
+        </li>
+        <li class="mode reveal d5" data-char="羽" data-tilt>
+          <span class="tone">羽<small>MODE V</small></span>
+          <h3>群主意愿</h3>
+          <p class="who">只有你 @ 的成员</p>
+          <div class="dots" title="Token 消耗：最低"><span class="dot on"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <span class="cost">最低</span>
+          <p class="scene">指定角色单答</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ══════════ 其四 · 器质 ══════════ -->
+  <section id="spec">
+    <div class="wrap">
+      <span class="ghost" data-speed="0.05">肆</span>
+      <svg class="brush-div" viewBox="0 0 620 24" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M8 13 C 90 6, 180 18, 270 9 C 350 3, 420 16, 500 9 C 555 5, 590 13, 612 9"/>
+      </svg>
+      <div class="chap reveal">
+        <span class="chap-no">其四</span>
+        <h2>器质<small>SPECIFICATIONS</small></h2>
+        <p class="chap-lead">一行是一行，不夸饰。</p>
+      </div>
+      <div class="stats reveal">
+        <div class="stat"><strong>23</strong><span>Kotlin 文件</span></div>
+        <div class="stat"><strong>6,670</strong><span>行代码</span></div>
+        <div class="stat"><strong>12</strong><span>MB · 安装包</span></div>
+        <div class="stat"><strong>6</strong><span>张数据表</span></div>
+      </div>
+      <dl class="colophon reveal">
+        <div class="crow"><dt>应用名称</dt><span class="leader"></span><dd><b>G-AI</b></dd></div>
+        <div class="crow"><dt>版本</dt><span class="leader"></span><dd>V1.0.0 Beta 2.2 <span class="en">versionCode 6</span></dd></div>
+        <div class="crow"><dt>平台</dt><span class="leader"></span><dd>Android 8.0 及以上 <span class="en">minSdk 26 / targetSdk 34</span></dd></div>
+        <div class="crow"><dt>实现</dt><span class="leader"></span><dd>Kotlin + Jetpack Compose <span class="en">Material 3 之上自建组件层</span></dd></div>
+        <div class="crow"><dt>架构分层</dt><span class="leader"></span><dd>data · Room+Flow ／ net · 协议适配 ／ chat · 引擎编排 ／ ui · 组件+屏幕</dd></div>
+        <div class="crow"><dt>支持协议</dt><span class="leader"></span><dd><span class="tag">OpenAI 兼容</span><span class="tag">Anthropic Claude</span><span class="tag">Google Gemini</span></dd></div>
+        <div class="crow"><dt>数据存储</dt><span class="leader"></span><dd>本地 Room + DataStore · 无云端 · 无账号</dd></div>
+        <div class="crow"><dt>联网</dt><span class="leader"></span><dd>仅在调用你配置的模型接口时联网 · 搜索功能可选</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ══════════ 其五 · 答问 ══════════ -->
+  <section id="faq">
+    <div class="wrap">
+      <span class="ghost" data-speed="0.06">伍</span>
+      <svg class="brush-div" viewBox="0 0 620 24" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M10 11 C 100 18, 160 5, 250 12 C 340 19, 420 7, 500 13 C 555 17, 585 8, 610 11"/>
+      </svg>
+      <div class="chap reveal">
+        <span class="chap-no">其五</span>
+        <h2>答问<small>QUESTIONS &amp; ANSWERS</small></h2>
+        <p class="chap-lead">常见疑问，逐条作答。</p>
+      </div>
+      <div class="faq">
+        <details class="qa reveal" open>
+          <summary><span class="qa-mark">问</span><h4>需要自己准备 API Key 吗？</h4><span class="qa-x"></span></summary>
+          <div class="qa-body"><div><p>需要。应用只负责对话与编排，模型由你自己的供应商账号提供。</p></div></div>
+        </details>
+        <details class="qa reveal">
+          <summary><span class="qa-mark">问</span><h4>支持国内中转站吗？</h4><span class="qa-x"></span></summary>
+          <div class="qa-body"><div><p>支持，任何兼容 OpenAI 格式的接口都能接。</p></div></div>
+        </details>
+        <details class="qa reveal">
+          <summary><span class="qa-mark">问</span><h4>数据会上传吗？</h4><span class="qa-x"></span></summary>
+          <div class="qa-body"><div><p>不会。聊天与配置都存在本地，只有调用模型接口时才会把你的对话发给该供应商。</p></div></div>
+        </details>
+        <details class="qa reveal">
+          <summary><span class="qa-mark">问</span><h4>能同时用不同厂商的模型吗？</h4><span class="qa-x"></span></summary>
+          <div class="qa-body"><div><p>可以，每个成员可绑定不同模型，也可整群统一一个模型。</p></div></div>
+        </details>
+        <details class="qa reveal">
+          <summary><span class="qa-mark">问</span><h4>换手机怎么迁移？</h4><span class="qa-x"></span></summary>
+          <div class="qa-body"><div><p>目前需手动备份，暂未内置导出功能。</p></div></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ 其六 · 联络 ══════════ -->
+  <section id="contact">
+    <div class="wrap">
+      <span class="ghost" data-speed="0.05">陆</span>
+      <svg class="brush-div" viewBox="0 0 620 24" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M8 12 C 90 18, 170 5, 260 11 C 350 18, 430 6, 510 12 C 560 15, 590 9, 612 12"/>
+      </svg>
+      <div class="chap reveal">
+        <span class="chap-no">其六</span>
+        <h2>联络<small>REACH OUT</small></h2>
+        <p class="chap-lead">合作 · 反馈 · 闲聊，皆可来纸上一叙。</p>
+      </div>
+      <div class="ccard reveal">
+        <div class="cc-left">
+          <span class="cc-seal" aria-hidden="true">联络</span>
+          <div>
+            <h3>联系我们</h3>
+            <p>有什么想聊的、想加的功能，或只是想看看别人怎么玩——都在。一纸相候，来者不拒。</p>
+          </div>
+        </div>
+        <div class="cc-right">
+          <span class="cc-label">QQ</span>
+          <strong class="cc-num">399 192 1169</strong>
+          <button class="btn btn-ghost btn-sm" data-copy="3991921169" data-msg="QQ 号已复制 · 期待来信">复制 QQ 号</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ 其七 · 众流 ══════════ -->
+  <section id="community">
+    <div class="wrap">
+      <span class="ghost" data-speed="0.06">柒</span>
+      <svg class="brush-div" viewBox="0 0 620 24" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M10 13 C 100 6, 170 17, 260 9 C 340 3, 410 16, 490 10 C 548 6, 585 13, 610 9"/>
+      </svg>
+      <div class="chap reveal">
+        <span class="chap-no">其七</span>
+        <h2>众流<small>TRIBUTARIES</small></h2>
+        <p class="chap-lead">讨论与大家 · 多群互通入口。每个群都经常更新免费 API，点击签牌即可复制群号。</p>
+      </div>
+      <!-- 群号核对：七群与一群同为 1064343054（原文如此，如为笔误请改）；其余群号请按实际核对 -->
+      <ol class="gtags">
+        <li class="gtag reveal d1" data-num="1064343054" data-name="一群" tabindex="0" role="button" aria-label="复制一群群号 1064343054">
+          <header><span class="g-seal">一群</span><span class="g-badge">内容最丰</span></header>
+          <strong class="g-num">1064343054</strong>
+          <p class="g-note">内容贼多——Claude · GPT · Gemini · Grok 等免费 API，常更常新</p>
+          <span class="g-act">点击复制群号</span>
+        </li>
+        <li class="gtag reveal d2" data-num="1091934754" data-name="二群" tabindex="0" role="button" aria-label="复制二群群号 1091934754">
+          <header><span class="g-seal">二群</span></header>
+          <strong class="g-num">1091934754</strong>
+          <p class="g-note">免费 API · 经常更新</p>
+          <span class="g-act">点击复制群号</span>
+        </li>
+        <li class="gtag reveal d3" data-num="1103038421" data-name="三群" tabindex="0" role="button" aria-label="复制三群群号 1103038421">
+          <header><span class="g-seal">三群</span></header>
+          <strong class="g-num">1103038421</strong>
+          <p class="g-note">免费 API · 经常更新</p>
+          <span class="g-act">点击复制群号</span>
+        </li>
+        <li class="gtag reveal d4" data-num="632702112" data-name="四群" tabindex="0" role="button" aria-label="复制四群群号 632702112">
+          <header><span class="g-seal">四群</span></header>
+          <strong class="g-num">632702112</strong>
+          <p class="g-note">免费 API · 经常更新</p>
+          <span class="g-act">点击复制群号</span>
+        </li>
+        <li class="gtag reveal d1" data-num="786718352" data-name="五群" tabindex="0" role="button" aria-label="复制五群群号 786718352">
+          <header><span class="g-seal">五群</span></header>
+          <strong class="g-num">786718352</strong>
+          <p class="g-note">免费 API · 经常更新</p>
+          <span class="g-act">点击复制群号</span>
+        </li>
+        <li class="gtag reveal d2" data-num="1103182882" data-name="六群" tabindex="0" role="button" aria-label="复制六群群号 1103182882">
+          <header><span class="g-seal">六群</span></header>
+          <strong class="g-num">1103182882</strong>
+          <p class="g-note">免费 API · 经常更新</p>
+          <span class="g-act">点击复制群号</span>
+        </li>
+        <li class="gtag reveal d3" data-num="1064343054" data-name="七群" tabindex="0" role="button" aria-label="复制七群群号 1064343054">
+          <header><span class="g-seal">七群</span></header>
+          <strong class="g-num">1064343054</strong>
+          <p class="g-note">免费 API · 经常更新</p>
+          <span class="g-act">点击复制群号</span>
+        </li>
+        <li class="gtag reveal d4" data-num="1102869818" data-name="八群" tabindex="0" role="button" aria-label="复制八群群号 1102869818">
+          <header><span class="g-seal">八群</span></header>
+          <strong class="g-num">1102869818</strong>
+          <p class="g-note">免费 API · 经常更新</p>
+          <span class="g-act">点击复制群号</span>
+        </li>
+      </ol>
+      <p class="g-tip reveal">各群资料互通，进任意一群即可 · 有需要可以添加，群里常有 Claude / GPT / Gemini 等免费 API 更新</p>
+    </div>
+  </section>
+</main>
+
+<!-- ══════════ 页脚 CTA ══════════ -->
+<section class="cta" id="download">
+  <svg class="enso2" viewBox="0 0 500 500" aria-hidden="true">
+    <path d="M250 30 C 122 42 36 150 40 260 C 44 374 150 468 266 464 C 374 460 458 378 460 264 C 462 160 380 58 266 42"/>
+  </svg>
+  <div class="cta-inner">
+    <h2 class="reveal">
+      <span class="w" style="--i:0">把</span><span class="w" style="--i:1">一群</span><span class="w" style="--i:2">AI</span><br>
+      <span class="w" style="--i:3">请进</span><em class="w" style="--i:4">同一个群</em>
+    </h2>
+    <p class="reveal d2">下载 APK，创建你的第一个 AI 群聊。</p>
+    <div class="hero-cta reveal d3">
+      <a class="btn btn-primary" href="#" id="dlFoot" data-mag>下载 G-AI Beta 2.2</a>
+      <a class="btn btn-ghost" href="#community" data-mag>进群交流</a>
+    </div>
+    <p class="cta-note reveal d4">当前为 Beta 版本 · 功能持续迭代中 · 交流 QQ 3991921169</p>
+    <span class="float-seal fs2">落墨无悔</span>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-in">
+    <span><span class="seal-mini">墨</span>G-AI · 丙午年 · 冬</span>
+    <span>联络 · QQ 3991921169 · <a href="#community">众流入群</a></span>
+    <span class="foot-en">INK ASSEMBLY — 本页水墨为实时流体演算，无任何预录素材</span>
+    <span><a href="#hero">回到卷首</a></span>
+  </div>
+</footer>
+
+<!-- ══════════ 释文面板 ══════════ -->
+<aside class="notes" id="notes" aria-hidden="true">
+  <div class="notes-mask" id="notesMask"></div>
+  <div class="notes-panel" role="dialog" aria-label="释文">
+    <div class="notes-head">
+      <h3>释文</h3><small>NOTES ON THE WORK</small>
+      <button class="btn-close" id="btnClose" aria-label="收起释文">合</button>
+    </div>
+    <div class="notes-body">
+      <h4>一 · 缘起</h4>
+      <p>本页是一件交互水墨，也是 G-AI 的释文。G-AI 是一款 Android 原生的多供应商、多角色 AI 群聊客户端：你建群、拉入多个 AI 人物卡，它们在同一份聊天记录里互相接话，而不是单对单问答。</p>
+      <p>屏幕即纸，指针即锋。你在这里看见的每一道墨痕，都是纳维—斯托克斯方程在此刻的解——正如群里的每一句接话，都是你拉进来的那些模型在此刻的回答。</p>
+      <h4>二 · 技法</h4>
+      <p>水与墨分而治之，皆在图形处理器上逐帧演算：速度场以半拉格朗日格式对流，压强经迭代求解泊松方程，涡量约束补偿数值耗散，令漩涡长久存续。显影零随机：淡墨呈暖褐，随浓度连续加深至碳黑；全链路线性重采样，另施以微量洇散模拟纸纤维的吸水。</p>
+      <p>行笔沿路径逐点落墨：缓则墨沉，急则墨飞；悬停只是风过纸面，推水而不沾墨。纸上有两种雨：一种随你的指尖引来，一种自天而落、随机溅墨——正如群聊里，有你的提问，也有不期而至的奇思。</p>
+      <h4>三 · 笔法</h4>
+      <ul class="brush">
+        <li><b><i>轻移</i>引流</b><span>风过纸面，只搅水脉，不落新墨</span></li>
+        <li><b><i>按拖</i>落墨</b><span>浓淡随行笔缓急，缓浓急淡</span></li>
+        <li><b><i>单击</i>滴墨</b><span>一点浓墨自然晕开</span></li>
+        <li><b><i>双击</i>起涡</b><span>将四周墨色卷入漩涡</span></li>
+        <li><b><i>天落</i>飞墨</b><span>偶有墨滴自空而降，溅纸成花</span></li>
+        <li><b><i>涤</i>洗纸</b><span>以水涤荡，另起一局</span></li>
+      </ul>
+      <h4>四 · 联络笔谈</h4>
+      <p>有意交流者，QQ 一封：<b>3991921169</b>。另有多个互通群，常更新 Claude / GPT / Gemini 等免费 API——入口见「众流」一章，点击签牌即可复制群号。</p>
+      <p class="notes-motto">像素之下，皆是水波；字句之下，皆是模型。</p>
+      <p class="notes-sign"><b>群墨</b> · 丙午年 冬 · 为 G-AI 而作</p>
+    </div>
+  </div>
+</aside>
+
+<script>
+'use strict';
+/* ============================================================
+   群墨 · 水墨流体引擎（暴露 API 供落墨系统调用）
+   ============================================================ */
+(function(){
+const canvas = document.getElementById('ink');
+const params = {
+  SIM_RESOLUTION: 144,
+  DYE_RESOLUTION: (Math.min(screen.width, screen.height) < 768) ? 512 : 1024,
+  DENSITY_DISSIPATION: 1.15,
+  VELOCITY_DISSIPATION: 0.22,
+  PRESSURE: 0.6,
+  PRESSURE_ITERATIONS: 20,
+  CURL: 22,
+  SPLAT_RADIUS: 0.19,
+  SPLAT_FORCE: 5400,
+};
+let drops = 0;
+const dropCountEl = document.getElementById('dropCount');
+const coordEl = document.getElementById('coord');
+
+function getWebGLContext(canvas){
+  const p = { alpha:false, depth:false, stencil:false, antialias:false, preserveDrawingBuffer:false };
+  let gl = canvas.getContext('webgl2', p);
+  const isWebGL2 = !!gl;
+  if(!isWebGL2) gl = canvas.getContext('webgl', p) || canvas.getContext('experimental-webgl', p);
+  if(!gl) return null;
+  let halfFloat, supportLinearFiltering;
+  if(isWebGL2){
+    gl.getExtension('EXT_color_buffer_float');
+    supportLinearFiltering = gl.getExtension('OES_texture_float_linear');
+  }else{
+    halfFloat = gl.getExtension('OES_texture_half_float');
+    supportLinearFiltering = gl.getExtension('OES_texture_half_float_linear');
+    if(!halfFloat) return null;
+  }
+  const halfFloatTexType = isWebGL2 ? gl.HALF_FLOAT : halfFloat.HALF_FLOAT_OES;
+  let formatRGBA, formatRG, formatR;
+  if(isWebGL2){
+    formatRGBA = getSupportedFormat(gl, gl.RGBA16F, gl.RGBA, halfFloatTexType);
+    formatRG   = getSupportedFormat(gl, gl.RG16F,   gl.RG,   halfFloatTexType);
+    formatR    = getSupportedFormat(gl, gl.R16F,    gl.RED,  halfFloatTexType);
+  }else{
+    formatRGBA = getSupportedFormat(gl, gl.RGBA, gl.RGBA, halfFloatTexType);
+    formatRG   = formatRGBA;
+    formatR    = formatRGBA;
+  }
+  if(!formatRGBA) return null;
+  return { gl, ext:{ formatRGBA, formatRG, formatR, halfFloatTexType, supportLinearFiltering: !!supportLinearFiltering } };
+}
+function getSupportedFormat(gl, internalFormat, format, type){
+  if(!supportRenderTextureFormat(gl, internalFormat, format, type)){
+    switch(internalFormat){
+      case gl.R16F:  return getSupportedFormat(gl, gl.RG16F,   gl.RG,   type);
+      case gl.RG16F: return getSupportedFormat(gl, gl.RGBA16F, gl.RGBA, type);
+      default: return null;
+    }
+  }
+  return { internalFormat, format };
+}
+function supportRenderTextureFormat(gl, internalFormat, format, type){
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, 4, 4, 0, format, type, null);
+  const fbo = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+  return gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+}
+const ctx = getWebGLContext(canvas);
+if(!ctx){ canvas.style.display='none'; window.__ink = null; return; }
+const gl = ctx.gl, ext = ctx.ext;
+
+function compileShader(type, source, keywords){
+  if(keywords) source = keywords.map(k=>'#define '+k+'\n').join('') + source;
+  const shader = gl.createShader(type);
+  gl.shaderSource(shader, source);
+  gl.compileShader(shader);
+  if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(shader));
+  return shader;
+}
+function createProgram(vs, fs){
+  const program = gl.createProgram();
+  gl.attachShader(program, vs);
+  gl.attachShader(program, fs);
+  gl.bindAttribLocation(program, 0, 'aPosition');
+  gl.linkProgram(program);
+  if(!gl.getProgramParameter(program, gl.LINK_STATUS)) console.error(gl.getProgramInfoLog(program));
+  return program;
+}
+function getUniforms(program){
+  const uniforms = {};
+  const count = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+  for(let i=0;i<count;i++){
+    const name = gl.getActiveUniform(program, i).name;
+    uniforms[name] = gl.getUniformLocation(program, name);
+  }
+  return uniforms;
+}
+class Program{
+  constructor(vs, fs){ this.program = createProgram(vs, fs); this.uniforms = getUniforms(this.program); }
+  bind(){ gl.useProgram(this.program); }
+}
+
+const baseVertex = `
+precision highp float;
+attribute vec2 aPosition;
+varying vec2 vUv;
+varying vec2 vL;
+varying vec2 vR;
+varying vec2 vT;
+varying vec2 vB;
+uniform vec2 texelSize;
+void main(){
+  vUv = aPosition * 0.5 + 0.5;
+  vL = vUv - vec2(texelSize.x, 0.0);
+  vR = vUv + vec2(texelSize.x, 0.0);
+  vT = vUv + vec2(0.0, texelSize.y);
+  vB = vUv - vec2(0.0, texelSize.y);
+  gl_Position = vec4(aPosition, 0.0, 1.0);
+}`;
+const clearShader = `
+precision mediump float;
+precision mediump sampler2D;
+varying highp vec2 vUv;
+uniform sampler2D uTexture;
+uniform float value;
+void main(){ gl_FragColor = value * texture2D(uTexture, vUv); }`;
+const splatShader = `
+precision highp float;
+precision highp sampler2D;
+varying vec2 vUv;
+uniform sampler2D uTarget;
+uniform float aspectRatio;
+uniform vec3 color;
+uniform vec2 point;
+uniform float radius;
+void main(){
+  vec2 p = vUv - point.xy;
+  p.x *= aspectRatio;
+  vec3 splat = exp(-dot(p, p) / radius) * color;
+  vec3 base = texture2D(uTarget, vUv).xyz;
+  gl_FragColor = vec4(base + splat, 1.0);
+}`;
+const advectionShader = `
+precision highp float;
+precision highp sampler2D;
+varying vec2 vUv;
+uniform sampler2D uVelocity;
+uniform sampler2D uSource;
+uniform vec2 texelSize;
+uniform vec2 dyeTexelSize;
+uniform float dt;
+uniform float dissipation;
+vec4 bilerp(sampler2D sam, vec2 uv, vec2 tsize){
+  vec2 st = uv / tsize - 0.5;
+  vec2 iuv = floor(st);
+  vec2 fuv = fract(st);
+  vec4 a = texture2D(sam, (iuv + vec2(0.5, 0.5)) * tsize);
+  vec4 b = texture2D(sam, (iuv + vec2(1.5, 0.5)) * tsize);
+  vec4 c = texture2D(sam, (iuv + vec2(0.5, 1.5)) * tsize);
+  vec4 d = texture2D(sam, (iuv + vec2(1.5, 1.5)) * tsize);
+  return mix(mix(a, b, fuv.x), mix(c, d, fuv.x), fuv.y);
+}
+void main(){
+#ifdef MANUAL_FILTERING
+  vec2 coord = vUv - dt * bilerp(uVelocity, vUv, texelSize).xy * texelSize;
+  vec4 result = bilerp(uSource, coord, dyeTexelSize);
+#else
+  vec2 coord = vUv - dt * texture2D(uVelocity, vUv).xy * texelSize;
+  vec4 result = texture2D(uSource, coord);
+#endif
+  float decay = 1.0 + dissipation * dt;
+  gl_FragColor = result / decay;
+}`;
+const divergenceShader = `
+precision mediump float;
+precision mediump sampler2D;
+varying highp vec2 vUv;
+varying highp vec2 vL;
+varying highp vec2 vR;
+varying highp vec2 vT;
+varying highp vec2 vB;
+uniform sampler2D uVelocity;
+void main(){
+  float L = texture2D(uVelocity, vL).x;
+  float R = texture2D(uVelocity, vR).x;
+  float T = texture2D(uVelocity, vT).y;
+  float B = texture2D(uVelocity, vB).y;
+  vec2 C = texture2D(uVelocity, vUv).xy;
+  if (vL.x < 0.0) { L = -C.x; }
+  if (vR.x > 1.0) { R = -C.x; }
+  if (vT.y > 1.0) { T = -C.y; }
+  if (vB.y < 0.0) { B = -C.y; }
+  float div = 0.5 * (R - L + T - B);
+  gl_FragColor = vec4(div, 0.0, 0.0, 1.0);
+}`;
+const curlShader = `
+precision mediump float;
+precision mediump sampler2D;
+varying highp vec2 vUv;
+varying highp vec2 vL;
+varying highp vec2 vR;
+varying highp vec2 vT;
+varying highp vec2 vB;
+uniform sampler2D uVelocity;
+void main(){
+  float L = texture2D(uVelocity, vL).y;
+  float R = texture2D(uVelocity, vR).y;
+  float T = texture2D(uVelocity, vT).x;
+  float B = texture2D(uVelocity, vB).x;
+  float vorticity = R - L - T + B;
+  gl_FragColor = vec4(0.5 * vorticity, 0.0, 0.0, 1.0);
+}`;
+const vorticityShader = `
+precision highp float;
+precision highp sampler2D;
+varying vec2 vUv;
+varying vec2 vL;
+varying vec2 vR;
+varying vec2 vT;
+varying vec2 vB;
+uniform sampler2D uVelocity;
+uniform sampler2D uCurl;
+uniform float curl;
+uniform float dt;
+void main(){
+  float L = texture2D(uCurl, vL).x;
+  float R = texture2D(uCurl, vR).x;
+  float T = texture2D(uCurl, vT).x;
+  float B = texture2D(uCurl, vB).x;
+  float C = texture2D(uCurl, vUv).x;
+  vec2 force = 0.5 * vec2(abs(T) - abs(B), abs(R) - abs(L));
+  force /= length(force) + 0.0001;
+  force *= curl * C;
+  force.y *= -1.0;
+  vec2 velocity = texture2D(uVelocity, vUv).xy;
+  velocity += force * dt;
+  velocity = min(max(velocity, -1000.0), 1000.0);
+  gl_FragColor = vec4(velocity, 0.0, 1.0);
+}`;
+const pressureShader = `
+precision mediump float;
+precision mediump sampler2D;
+varying highp vec2 vUv;
+varying highp vec2 vL;
+varying highp vec2 vR;
+varying highp vec2 vT;
+varying highp vec2 vB;
+uniform sampler2D uPressure;
+uniform sampler2D uDivergence;
+void main(){
+  float L = texture2D(uPressure, vL).x;
+  float R = texture2D(uPressure, vR).x;
+  float T = texture2D(uPressure, vT).x;
+  float B = texture2D(uPressure, vB).x;
+  float divergence = texture2D(uDivergence, vUv).x;
+  float pressure = (L + R + B + T - divergence) * 0.25;
+  gl_FragColor = vec4(pressure, 0.0, 0.0, 1.0);
+}`;
+const gradientSubtractShader = `
+precision mediump float;
+precision mediump sampler2D;
+varying highp vec2 vUv;
+varying highp vec2 vL;
+varying highp vec2 vR;
+varying highp vec2 vT;
+varying highp vec2 vB;
+uniform sampler2D uPressure;
+uniform sampler2D uVelocity;
+void main(){
+  float L = texture2D(uPressure, vL).x;
+  float R = texture2D(uPressure, vR).x;
+  float T = texture2D(uPressure, vT).x;
+  float B = texture2D(uPressure, vB).x;
+  vec2 velocity = texture2D(uVelocity, vUv).xy;
+  velocity.xy -= vec2(R - L, T - B);
+  gl_FragColor = vec4(velocity, 0.0, 1.0);
+}`;
+const displayShader = `
+precision highp float;
+precision highp sampler2D;
+varying vec2 vUv;
+uniform sampler2D uTexture;
+uniform vec2 texelSize;
+const vec3 PAPER = vec3(0.957, 0.937, 0.890);
+const vec3 TAN   = vec3(0.560, 0.492, 0.392);
+const vec3 INK   = vec3(0.082, 0.076, 0.070);
+void main(){
+  float c  = texture2D(uTexture, vUv).r;
+  float cL = texture2D(uTexture, vUv - vec2(texelSize.x * 1.4, 0.0)).r;
+  float cR = texture2D(uTexture, vUv + vec2(texelSize.x * 1.4, 0.0)).r;
+  float cT = texture2D(uTexture, vUv + vec2(0.0, texelSize.y * 1.4)).r;
+  float cB = texture2D(uTexture, vUv - vec2(0.0, texelSize.y * 1.4)).r;
+  float d = (c * 4.0 + cL + cR + cT + cB) * 0.125;
+  float t = 1.0 - exp(-max(d, 0.0) * 2.7);
+  vec3 col = mix(PAPER, TAN, clamp(t * 2.3, 0.0, 1.0));
+  col = mix(col, INK, smoothstep(0.16, 0.86, t));
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+const baseVS = compileShader(gl.VERTEX_SHADER, baseVertex);
+const progClear    = new Program(baseVS, compileShader(gl.FRAGMENT_SHADER, clearShader));
+const progSplat    = new Program(baseVS, compileShader(gl.FRAGMENT_SHADER, splatShader));
+const progAdvect   = new Program(baseVS, compileShader(gl.FRAGMENT_SHADER, advectionShader, ext.supportLinearFiltering ? null : ['MANUAL_FILTERING']));
+const progDiverge  = new Program(baseVS, compileShader(gl.FRAGMENT_SHADER, divergenceShader));
+const progCurl     = new Program(baseVS, compileShader(gl.FRAGMENT_SHADER, curlShader));
+const progVort     = new Program(baseVS, compileShader(gl.FRAGMENT_SHADER, vorticityShader));
+const progPressure = new Program(baseVS, compileShader(gl.FRAGMENT_SHADER, pressureShader));
+const progGradSub  = new Program(baseVS, compileShader(gl.FRAGMENT_SHADER, gradientSubtractShader));
+const progDisplay  = new Program(baseVS, compileShader(gl.FRAGMENT_SHADER, displayShader));
+
+const blit = (function(){
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,-1,1,1,1,1,-1]), gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0,1,2,0,2,3]), gl.STATIC_DRAW);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(0);
+  return function(target){
+    if(target == null){
+      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }else{
+      gl.viewport(0, 0, target.width, target.height);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, target.fbo);
+    }
+    gl.drawElements(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0);
+  };
+})();
+
+function createFBO(w, h, internalFormat, format, type, param){
+  gl.activeTexture(gl.TEXTURE0);
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, param);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, param);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, w, h, 0, format, type, null);
+  const fbo = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+  gl.viewport(0, 0, w, h);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  return {
+    texture, fbo, width: w, height: h,
+    texelSizeX: 1.0 / w, texelSizeY: 1.0 / h,
+    attach(id){ gl.activeTexture(gl.TEXTURE0 + id); gl.bindTexture(gl.TEXTURE_2D, texture); return id; }
+  };
+}
+function createDoubleFBO(w, h, internalFormat, format, type, param){
+  let fbo1 = createFBO(w, h, internalFormat, format, type, param);
+  let fbo2 = createFBO(w, h, internalFormat, format, type, param);
+  return {
+    width: w, height: h, texelSizeX: fbo1.texelSizeX, texelSizeY: fbo1.texelSizeY,
+    get read(){ return fbo1; }, set read(v){ fbo1 = v; },
+    get write(){ return fbo2; }, set write(v){ fbo2 = v; },
+    swap(){ const t = fbo1; fbo1 = fbo2; fbo2 = t; }
+  };
+}
+function getResolution(resolution){
+  let aspectRatio = gl.drawingBufferWidth / gl.drawingBufferHeight;
+  if(aspectRatio < 1) aspectRatio = 1.0 / aspectRatio;
+  const min = Math.round(resolution), max = Math.round(resolution * aspectRatio);
+  return (gl.drawingBufferWidth > gl.drawingBufferHeight)
+    ? { width: max, height: min } : { width: min, height: max };
+}
+let dye, velocity, divergence, curl, pressure;
+function initFramebuffers(){
+  const simRes = getResolution(params.SIM_RESOLUTION);
+  const dyeRes = getResolution(params.DYE_RESOLUTION);
+  const texType = ext.halfFloatTexType;
+  const rgba = ext.formatRGBA, rg = ext.formatRG, r = ext.formatR;
+  const filtering = ext.supportLinearFiltering ? gl.LINEAR : gl.NEAREST;
+  gl.disable(gl.BLEND);
+  dye      = createDoubleFBO(dyeRes.width, dyeRes.height, rgba.internalFormat, rgba.format, texType, filtering);
+  velocity = createDoubleFBO(simRes.width, simRes.height, rg.internalFormat, rg.format, texType, filtering);
+  divergence = createFBO(simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);
+  curl       = createFBO(simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);
+  pressure   = createDoubleFBO(simRes.width, simRes.height, r.internalFormat, r.format, texType, gl.NEAREST);
+}
+
+function resizeCanvas(){
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.floor(canvas.clientWidth * dpr);
+  const h = Math.floor(canvas.clientHeight * dpr);
+  if(canvas.width !== w || canvas.height !== h){
+    canvas.width = w; canvas.height = h;
+    return true;
+  }
+  return false;
+}
+resizeCanvas();
+initFramebuffers();
+
+function correctRadius(radius){
+  const aspect = canvas.width / canvas.height;
+  if(aspect > 1) radius *= aspect;
+  return radius;
+}
+function correctDeltaX(delta){ const a = canvas.width / canvas.height; if(a < 1) delta *= a; return delta; }
+function correctDeltaY(delta){ const a = canvas.width / canvas.height; if(a > 1) delta /= a; return delta; }
+
+function splat(x, y, dx, dy, inkStrength, radiusMul){
+  radiusMul = radiusMul || 1;
+  progSplat.bind();
+  gl.uniform1f(progSplat.uniforms.aspectRatio, canvas.width / canvas.height);
+  gl.uniform2f(progSplat.uniforms.point, x, y);
+  gl.uniform1f(progSplat.uniforms.radius, correctRadius(params.SPLAT_RADIUS / 100 * radiusMul));
+  gl.uniform1i(progSplat.uniforms.uTarget, velocity.read.attach(0));
+  gl.uniform3f(progSplat.uniforms.color, dx, dy, 0.0);
+  blit(velocity.write); velocity.swap();
+  if(inkStrength != null){
+    gl.uniform1i(progSplat.uniforms.uTarget, dye.read.attach(0));
+    gl.uniform3f(progSplat.uniforms.color, inkStrength, 0, 0);
+    blit(dye.write); dye.swap();
+  }
+}
+function vortexAt(x, y){
+  const aspect = canvas.width / canvas.height;
+  const n = 12, R = 0.085, F = 950;
+  splat(x, y, 0, 0, 0.5, 1.5);
+  for(let i = 0; i < n; i++){
+    const a = (i / n) * Math.PI * 2;
+    const px = x + Math.cos(a) * R / aspect;
+    const py = y + Math.sin(a) * R;
+    splat(px, py, -Math.sin(a) * F, Math.cos(a) * F, null, 1);
+  }
+  drops++; updateDrops();
+}
+function drop(x, y, strength, radiusMul){
+  /* 一点浓墨 + 淡晕，自然洇开 */
+  splat(x, y, 0, 0, strength, radiusMul || 1.7);
+  splat(x, y, 0, 0, strength * 0.32, (radiusMul || 1.7) * 2.3);
+  drops++; updateDrops();
+}
+function updateDrops(){ dropCountEl.textContent = drops; }
+function rinse(){
+  progClear.bind();
+  gl.uniform1i(progClear.uniforms.uTexture, velocity.read.attach(0));
+  gl.uniform1f(progClear.uniforms.value, 0);
+  blit(velocity.write); velocity.swap();
+  gl.uniform1i(progClear.uniforms.uTexture, dye.read.attach(0));
+  blit(dye.write); dye.swap();
+  drops = 0; updateDrops();
+}
+
+function step(dt){
+  gl.disable(gl.BLEND);
+  progCurl.bind();
+  gl.uniform2f(progCurl.uniforms.texelSize, velocity.texelSizeX, velocity.texelSizeY);
+  gl.uniform1i(progCurl.uniforms.uVelocity, velocity.read.attach(0));
+  blit(curl);
+
+  progVort.bind();
+  gl.uniform2f(progVort.uniforms.texelSize, velocity.texelSizeX, velocity.texelSizeY);
+  gl.uniform1i(progVort.uniforms.uVelocity, velocity.read.attach(0));
+  gl.uniform1i(progVort.uniforms.uCurl, curl.attach(1));
+  gl.uniform1f(progVort.uniforms.curl, params.CURL);
+  gl.uniform1f(progVort.uniforms.dt, dt);
+  blit(velocity.write); velocity.swap();
+
+  progDiverge.bind();
+  gl.uniform2f(progDiverge.uniforms.texelSize, velocity.texelSizeX, velocity.texelSizeY);
+  gl.uniform1i(progDiverge.uniforms.uVelocity, velocity.read.attach(0));
+  blit(divergence);
+
+  progClear.bind();
+  gl.uniform1i(progClear.uniforms.uTexture, pressure.read.attach(0));
+  gl.uniform1f(progClear.uniforms.value, params.PRESSURE);
+  blit(pressure.write); pressure.swap();
+
+  progPressure.bind();
+  gl.uniform2f(progPressure.uniforms.texelSize, velocity.texelSizeX, velocity.texelSizeY);
+  gl.uniform1i(progPressure.uniforms.uDivergence, divergence.attach(0));
+  for(let i = 0; i < params.PRESSURE_ITERATIONS; i++){
+    gl.uniform1i(progPressure.uniforms.uPressure, pressure.read.attach(1));
+    blit(pressure.write); pressure.swap();
+  }
+
+  progGradSub.bind();
+  gl.uniform2f(progGradSub.uniforms.texelSize, velocity.texelSizeX, velocity.texelSizeY);
+  gl.uniform1i(progGradSub.uniforms.uPressure, pressure.read.attach(0));
+  gl.uniform1i(progGradSub.uniforms.uVelocity, velocity.read.attach(1));
+  blit(velocity.write); velocity.swap();
+
+  progAdvect.bind();
+  gl.uniform2f(progAdvect.uniforms.texelSize, velocity.texelSizeX, velocity.texelSizeY);
+  if(!ext.supportLinearFiltering)
+    gl.uniform2f(progAdvect.uniforms.dyeTexelSize, velocity.texelSizeX, velocity.texelSizeY);
+  const velId = velocity.read.attach(0);
+  gl.uniform1i(progAdvect.uniforms.uVelocity, velId);
+  gl.uniform1i(progAdvect.uniforms.uSource, velId);
+  gl.uniform1f(progAdvect.uniforms.dt, dt);
+  gl.uniform1f(progAdvect.uniforms.dissipation, params.VELOCITY_DISSIPATION);
+  blit(velocity.write); velocity.swap();
+
+  if(!ext.supportLinearFiltering)
+    gl.uniform2f(progAdvect.uniforms.dyeTexelSize, dye.texelSizeX, dye.texelSizeY);
+  gl.uniform1i(progAdvect.uniforms.uVelocity, velocity.read.attach(0));
+  gl.uniform1i(progAdvect.uniforms.uSource, dye.read.attach(1));
+  gl.uniform1f(progAdvect.uniforms.dissipation, params.DENSITY_DISSIPATION);
+  blit(dye.write); dye.swap();
+}
+function render(){
+  progDisplay.bind();
+  gl.uniform2f(progDisplay.uniforms.texelSize, dye.texelSizeX, dye.texelSizeY);
+  gl.uniform1i(progDisplay.uniforms.uTexture, dye.read.attach(0));
+  blit(null);
+}
+
+/* ---------- 指针：真实笔触 ---------- */
+const pointers = new Map();
+let lastTapTime = 0, lastTapX = 0, lastTapY = 0, lastHov = null;
+function uv(e){
+  return { x: e.clientX / window.innerWidth, y: 1 - e.clientY / window.innerHeight };
+}
+/* 行笔：沿路径插值逐点落墨，浓淡随缓急，笔腹微随机 */
+function strokeTo(p, q){
+  const dx = q.x - p.x, dy = q.y - p.y;
+  const dist = Math.hypot(dx, dy);
+  if(dist < 1e-5) return;
+  const steps = Math.max(1, Math.min(22, Math.round(dist * 240)));
+  const speedPx = dist * window.innerWidth;
+  let base = 0.40 / (1 + speedPx * 0.010);
+  base = Math.max(0.05, Math.min(0.45, base));
+  const per = Math.min(0.5, base * 1.7 / Math.sqrt(steps));
+  const vx = dx * params.SPLAT_FORCE / steps * 1.7;
+  const vy = dy * params.SPLAT_FORCE / steps * 1.7;
+  for(let i = 1; i <= steps; i++){
+    const t = i / steps;
+    splat(p.x + dx * t, p.y + dy * t, vx, vy, per, 0.78 + Math.random() * 0.44);
+  }
+}
+/* 引流：风过纸面，只推水不落墨 */
+function gustTo(p, q){
+  const dx = q.x - p.x, dy = q.y - p.y;
+  const dist = Math.hypot(dx, dy);
+  if(dist < 1e-5) return;
+  const steps = Math.max(1, Math.min(10, Math.round(dist * 140)));
+  const gain = params.SPLAT_FORCE * (0.22 + Math.min(dist * 7, 0.55));
+  const vx = dx * gain / steps * 2.1;
+  const vy = dy * gain / steps * 2.1;
+  for(let i = 1; i <= steps; i++){
+    const t = i / steps;
+    splat(p.x + dx * t, p.y + dy * t, vx, vy, null, 1.3);
+  }
+}
+canvas.addEventListener('pointerdown', e => {
+  const q = uv(e);
+  const now = performance.now();
+  const isDouble = (now - lastTapTime < 320) && Math.hypot(q.x - lastTapX, (1 - q.y) - lastTapY) < 0.05;
+  lastTapTime = now; lastTapX = q.x; lastTapY = 1 - q.y;
+  pointers.set(e.pointerId, { x: q.x, y: q.y });
+  lastHov = null;
+  if(isDouble){ vortexAt(q.x, q.y); }
+  else{ drop(q.x, q.y, 0.9, 1.7); pingDOM(e.clientX, e.clientY, false); }
+  if(canvas.setPointerCapture){ try{ canvas.setPointerCapture(e.pointerId); }catch(_){} }
+});
+canvas.addEventListener('pointermove', e => {
+  const q = uv(e);
+  coordEl.textContent = 'x ' + q.x.toFixed(3) + ' · y ' + (1 - q.y).toFixed(3);
+  const p = pointers.get(e.pointerId);
+  if(p){
+    strokeTo(p, q);
+    p.x = q.x; p.y = q.y;
+  }else{
+    if(lastHov){ gustTo(lastHov, q); }
+    lastHov = q;
+  }
+});
+function endPointer(e){ pointers.delete(e.pointerId); }
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+canvas.addEventListener('pointerleave', () => { pointers.clear(); lastHov = null; });
+canvas.addEventListener('dblclick', e => {
+  const q = uv(e);
+  vortexAt(q.x, q.y);
+});
+document.getElementById('btnRinse').addEventListener('click', rinse);
+
+/* ---------- 开卷落墨 ---------- */
+let opened = false;
+function opening(){
+  if(opened) return;
+  opened = true;
+  drop(0.32, 0.62, 0.85, 2.1);
+  setTimeout(()=>drop(0.62, 0.40, 0.45, 1.5), 160);
+  setTimeout(()=>drop(0.47, 0.55, 0.30, 1.2), 320);
+  setTimeout(()=>vortexAt(0.50, 0.48), 520);
+}
+
+/* ---------- 可见性 ---------- */
+let heroVisible = true, ctaVisible = false;
+function watch(el, set){
+  if(!el) return;
+  new IntersectionObserver(es => es.forEach(en => set(en.isIntersecting)), { threshold: 0 }).observe(el);
+}
+watch(document.getElementById('hero'), v => heroVisible = v);
+watch(document.getElementById('download'), v => ctaVisible = v);
+
+let lastTime = performance.now();
+function frame(now){
+  const dt = Math.min((now - lastTime) / 1000, 1 / 30);
+  lastTime = now;
+  if(resizeCanvas()) initFramebuffers();
+  if((heroVisible || ctaVisible) && !document.hidden){
+    step(dt);
+    render();
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+window.__ink = {
+  splat: (u, v, dx, dy, ink, rm) => splat(u, v, dx, dy, ink, rm),
+  vortex: (u, v) => vortexAt(u, v),
+  drop: (u, v, ink, rm) => drop(u, v, ink, rm),
+  rinse,
+  opening,
+  active: () => (heroVisible || ctaVisible)
+};
+})();
+
+/* ---------- 点击晕圈（DOM） ---------- */
+function pingDOM(x, y, red){
+  const sp = document.createElement('div');
+  sp.className = 'splash';
+  sp.style.left = x + 'px';
+  sp.style.top = y + 'px';
+  sp.innerHTML = '<span class="ring' + (red ? ' red' : '') + '"></span>';
+  document.body.appendChild(sp);
+  setTimeout(() => sp.remove(), 700);
+}
+
+/* ============================================================
+   天落飞墨：随机自屏幕上方坠落 · 溅纸成花
+   ============================================================ */
+(function(){
+const rain = document.getElementById('rain');
+const drops = [];
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const MOBILE = matchMedia('(pointer: coarse)').matches;
+let running = false, lastT = performance.now();
+
+function spawn(){
+  if(document.hidden || drops.length >= (MOBILE ? 3 : 6)) return;
+  const size = 4.5 + Math.random() * 5.5;
+  const el = document.createElement('div');
+  el.className = 'idrop';
+  el.style.width = size + 'px';
+  el.style.height = (size * 1.3) + 'px';
+  const leftVw = 4 + Math.random() * 92;
+  el.style.left = leftVw + 'vw';
+  el.innerHTML = '<b></b><i></i>';
+  rain.appendChild(el);
+  drops.push({
+    el,
+    x: leftVw / 100 * innerWidth + size / 2,
+    y: -46,
+    vy: 70 + Math.random() * 130,
+    vx: (Math.random() - 0.5) * 46,
+    phase: Math.random() * 6.28,
+    targetY: (0.14 + Math.random() * 0.70) * innerHeight
+  });
+  ensureLoop();
+}
+function land(d){
+  d.el.remove();
+  const i = drops.indexOf(d);
+  if(i > -1) drops.splice(i, 1);
+  const sp = document.createElement('div');
+  sp.className = 'splash';
+  sp.style.left = d.x + 'px';
+  sp.style.top = d.y + 'px';
+  sp.innerHTML = '<span class="ring' + (Math.random() < 0.2 ? ' red' : '') + '"></span>';
+  const N = 4 + (Math.random() * 3 | 0);
+  for(let k = 0; k < N; k++){
+    const dot = document.createElement('span');
+    dot.className = 'd';
+    sp.appendChild(dot);
+  }
+  document.body.appendChild(sp);
+  const dots = sp.querySelectorAll('.d');
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    dots.forEach(dot => {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.3;
+      const r = 22 + Math.random() * 40;
+      dot.style.transform = 'translate(' + Math.cos(a) * r + 'px,' + Math.sin(a) * r + 'px) scale(.35)';
+      dot.style.opacity = '0';
+    });
+  }));
+  setTimeout(() => sp.remove(), 750);
+  /* 与流体联动 */
+  const I = window.__ink;
+  if(!I) return;
+  const u = d.x / innerWidth;
+  const v = 1 - d.y / innerHeight;
+  if(Math.random() < 0.14){
+    I.vortex(u, v);
+  }else{
+    const inkAmt = 0.3 + Math.random() * 0.45;
+    const dyVel = Math.min(d.vy * 0.0022, 3.2);
+    I.splat(u, v, (Math.random() - 0.5) * 1.2, dyVel, inkAmt, 0.8 + Math.random() * 0.9);
+  }
+}
+function tick(now){
+  const dt = Math.min((now - lastT) / 1000, 0.05);
+  lastT = now;
+  for(let i = drops.length - 1; i >= 0; i--){
+    const d = drops[i];
+    d.vy += 2900 * dt;
+    d.phase += dt * 3;
+    d.x += (d.vx + Math.sin(d.phase) * 16) * dt;
+    d.y += d.vy * dt;
+    const w = parseFloat(d.el.style.width);
+    d.el.style.transform = 'translate3d(' + (d.x - w / 2 - parseFloat(d.el.style.left)) + 'px,' + d.y + 'px,0)';
+    if(d.y >= d.targetY) land(d);
+  }
+  if(drops.length) requestAnimationFrame(tick);
+  else running = false;
+}
+function ensureLoop(){
+  if(!running){ running = true; lastT = performance.now(); requestAnimationFrame(tick); }
+}
+function loop(){
+  if(!REDUCED && !document.hidden){
+    spawn();
+    if(Math.random() < 0.18) setTimeout(spawn, 90 + Math.random() * 180);
+  }
+  setTimeout(loop, (MOBILE ? 3400 : 2600) + Math.random() * 3200);
+}
+window.__startRain = loop;
+})();
+
+/* ============================================================
+   自定义光标 · 暖光跟随
+   ============================================================ */
+(function(){
+const FINE = matchMedia('(pointer: fine)').matches;
+if(!FINE) return;
+document.body.classList.add('cursor-on');
+const dot = document.getElementById('cur-dot');
+const ring = document.getElementById('cur-ring');
+const glow = document.getElementById('cur-glow');
+let mx = innerWidth / 2, my = innerHeight / 2;
+let rx = mx, ry = my, gx = mx, gy = my;
+let shown = false;
+addEventListener('pointermove', e => {
+  mx = e.clientX; my = e.clientY;
+  if(!shown){
+    shown = true;
+    dot.style.opacity = ring.style.opacity = glow.style.opacity = 1;
+  }
+}, { passive: true });
+document.addEventListener('mouseover', e => {
+  const hot = e.target.closest('a,button,summary,[data-tilt],.hints,.qa,.spec-row,.crow,.gtag,.ccard,.ch-list li');
+  ring.classList.toggle('hot', !!hot);
+});
+(function raf(){
+  rx += (mx - rx) * 0.18; ry += (my - ry) * 0.18;
+  gx += (mx - gx) * 0.07; gy += (my - gy) * 0.07;
+  dot.style.transform = 'translate3d(' + mx + 'px,' + my + 'px,0)';
+  ring.style.transform = 'translate3d(' + rx + 'px,' + ry + 'px,0)';
+  glow.style.transform = 'translate3d(' + gx + 'px,' + gy + 'px,0)';
+  requestAnimationFrame(raf);
+})();
+})();
+
+/* ============================================================
+   页面交互：加载 / 入场 / 视差 / 倾斜 / 磁吸 / 复制 / Toast
+   ============================================================ */
+(function(){
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FINE = matchMedia('(pointer: fine)').matches;
+
+/* 跑马灯无缝 */
+const mq = document.getElementById('mqTrack');
+mq.innerHTML += mq.innerHTML;
+
+/* 漂浮墨尘 */
+const hero = document.getElementById('hero');
+for(let i = 0; i < 10; i++){
+  const m = document.createElement('span');
+  m.className = 'mote';
+  const s = 2.5 + Math.random() * 4;
+  m.style.cssText = 'width:' + s + 'px;height:' + s + 'px;left:' + (4 + Math.random() * 92) + '%;bottom:-4vh;' +
+    '--sw:' + ((Math.random() - 0.5) * 90).toFixed(0) + ';' +
+    'animation-duration:' + (13 + Math.random() * 12) + 's;animation-delay:' + (Math.random() * 12) + 's;';
+  hero.appendChild(m);
+}
+
+/* 研墨开场序列 */
+const loader = document.getElementById('loader');
+function finishLoad(){
+  if(document.body.classList.contains('loaded')) return;
+  document.body.classList.add('loaded');
+  loader.classList.add('done');
+  setTimeout(() => loader.remove(), 950);
+  setTimeout(() => { if(window.__ink) window.__ink.opening(); }, 180);
+  if(window.__startRain) window.__startRain();
+}
+requestAnimationFrame(() => loader.classList.add('go'));
+if(REDUCED){ finishLoad(); }
+else{
+  setTimeout(finishLoad, 1500);
+  loader.addEventListener('click', finishLoad);
+}
+
+/* 顶栏 / 进度卷轴 / 巨影视差 */
+const topbar = document.getElementById('topbar');
+const pfill = document.getElementById('pfill');
+const pmark = document.getElementById('pmark');
+const ghosts = Array.from(document.querySelectorAll('.ghost'));
+let ticking = false;
+function onScroll(){
+  if(ticking) return;
+  ticking = true;
+  requestAnimationFrame(() => {
+    ticking = false;
+    const y = scrollY;
+    topbar.classList.toggle('scrolled', y > 40);
+    const max = document.documentElement.scrollHeight - innerHeight;
+    const p = max > 0 ? Math.min(y / max, 1) : 0;
+    pfill.style.transform = 'scaleY(' + p + ')';
+    pmark.style.top = (p * 100) + '%';
+    ghosts.forEach(g => {
+      const r = g.getBoundingClientRect();
+      const off = (r.top + r.height / 2 - innerHeight / 2) * parseFloat(g.dataset.speed || 0.06);
+      g.style.transform = 'translateY(' + off.toFixed(1) + 'px)';
+    });
+  });
+}
+addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+
+/* 入场显影 */
+const io = new IntersectionObserver(entries => {
+  entries.forEach(en => {
+    if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); }
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+document.querySelectorAll('.reveal, .brush-div').forEach(el => io.observe(el));
+
+/* CTA 禅圆 */
+const cta = document.getElementById('download');
+new IntersectionObserver(es => es.forEach(en => {
+  if(en.isIntersecting) cta.classList.add('in');
+}), { threshold: 0.25 }).observe(cta);
+
+/* 卡片 3D 倾斜 + 辉光 */
+if(FINE && !REDUCED){
+  document.querySelectorAll('[data-tilt]').forEach(card => {
+    let raf = null;
+    card.addEventListener('mousemove', e => {
+      const r = card.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width;
+      const py = (e.clientY - r.top) / r.height;
+      card.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+      card.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+      if(raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = null;
+        const rx = (0.5 - py) * 7;
+        const ry = (px - 0.5) * 7;
+        const lift = card.classList.contains('vcard') && (card === card.parentNode.children[1] || card === card.parentNode.children[4]) ? 30 : 0;
+        card.style.transform = 'perspective(900px) rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) + 'deg) translateY(' + (lift - 6) + 'px)';
+      });
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transition = 'transform .7s cubic-bezier(.22,1,.36,1), border-color .4s, box-shadow .5s';
+      card.style.transform = card.classList.contains('vcard') && (card === card.parentNode.children[1] || card === card.parentNode.children[4]) ? 'translateY(30px)' : '';
+      setTimeout(() => { card.style.transition = ''; }, 700);
+    });
+  });
+}
+
+/* 墨滴填充按钮 */
+document.querySelectorAll('.btn, .btn-mini').forEach(btn => {
+  btn.addEventListener('mousemove', e => {
+    const r = btn.getBoundingClientRect();
+    btn.style.setProperty('--bx', ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%');
+    btn.style.setProperty('--by', ((e.clientY - r.top) / r.height * 100).toFixed(1) + '%');
+  });
+});
+
+/* 磁吸按钮 */
+if(FINE && !REDUCED){
+  document.querySelectorAll('[data-mag]').forEach(btn => {
+    btn.addEventListener('mousemove', e => {
+      const r = btn.getBoundingClientRect();
+      const dx = (e.clientX - r.left - r.width / 2) / r.width;
+      const dy = (e.clientY - r.top - r.height / 2) / r.height;
+      btn.style.transform = 'translate(' + (dx * 8).toFixed(1) + 'px,' + (dy * 6 - 2).toFixed(1) + 'px)';
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transition = 'transform .55s cubic-bezier(.16,1.3,.3,1)';
+      btn.style.transform = '';
+      setTimeout(() => { btn.style.transition = ''; }, 560);
+    });
+  });
+}
+
+/* ---------- Toast ---------- */
+const toast = document.getElementById('toast');
+const toastMsg = document.getElementById('toastMsg');
+let toastTimer = null;
+function showToast(msg){
+  toastMsg.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 1900);
+}
+function copyText(text, msg){
+  const done = () => showToast(msg || ('已复制 · ' + text));
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand('copy'); done(); }
+    catch(e){ showToast('复制失败 · 请手动记下 ' + text); }
+    ta.remove();
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(fallback);
+  }else fallback();
+}
+/* 联络复制 */
+document.querySelectorAll('[data-copy]').forEach(btn => {
+  btn.addEventListener('click', () => copyText(btn.dataset.copy, btn.dataset.msg));
+});
+/* 群签复制 */
+document.querySelectorAll('.gtag').forEach(card => {
+  const num = card.dataset.num, name = card.dataset.name;
+  const go = () => { copyText(num, name + ' 群号已复制 · 众流见'); pingDOMinner(); };
+  function pingDOMinner(){
+    const r = card.getBoundingClientRect();
+    pingDOM(r.left + r.width / 2, r.top + r.height / 2, true);
+  }
+  card.addEventListener('click', go);
+  card.addEventListener('keydown', e => {
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); }
+  });
+});
+
+/* 释文面板 */
+const notes = document.getElementById('notes');
+const openNotes  = () => { notes.classList.add('open'); notes.setAttribute('aria-hidden','false'); document.body.style.overflow = 'hidden'; };
+const closeNotes = () => { notes.classList.remove('open'); notes.setAttribute('aria-hidden','true'); document.body.style.overflow = ''; };
+document.getElementById('btnNotes').addEventListener('click', openNotes);
+document.getElementById('btnClose').addEventListener('click', closeNotes);
+document.getElementById('notesMask').addEventListener('click', closeNotes);
+addEventListener('keydown', e => { if(e.key === 'Escape') closeNotes(); });
+
+/* FAQ 互斥展开 */
+document.querySelectorAll('.qa').forEach(d => {
+  d.addEventListener('toggle', () => {
+    if(d.open) document.querySelectorAll('.qa[open]').forEach(o => { if(o !== d) o.open = false; });
+  });
+});
+
+/* ====== APK 下载：不跳出本页面，带真实进度 ======
+   APK 用相对路径 'app.apk'，与本页面放在同一个目录下即可。
+   好处：同源 → 不受跨域限制 → 进度条一定能工作；
+        换任何域名访问都自动跟着变，不用改代码。
+   想改下载下来显示的文件名，改下面的 APK_NAME 就行。
+================================================== */
+const APK      = 'app.apk';
+const APK_NAME = 'G-AI-Beta-2.2.apk';
+
+/* 进度浮层（动态插入，不动原页面结构） */
+const __prog = document.createElement('div');
+__prog.style.cssText = 'position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(10,12,16,.72)';
+__prog.innerHTML =
+  '<div style="background:#fff;border-radius:16px;padding:26px 30px;min-width:280px;max-width:86vw;text-align:center;' +
+  'font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',\'PingFang SC\',\'Microsoft YaHei\',sans-serif;' +
+  'box-shadow:0 18px 50px rgba(0,0,0,.28)">' +
+    '<div id="__dlT" style="font-size:15px;font-weight:600;color:#171a21;margin-bottom:14px">正在下载…</div>' +
+    '<div style="height:8px;background:#e9ecf2;border-radius:99px;overflow:hidden">' +
+      '<div id="__dlB" style="height:100%;width:0;background:#2f6fed;border-radius:99px;transition:width .15s"></div></div>' +
+    '<div id="__dlP" style="font-size:12.5px;color:#7b8494;margin-top:10px">0%</div>' +
+    '<div id="__dlC" style="display:none;margin-top:16px">' +
+      '<button style="border:none;background:#f2f4f8;color:#545c6b;border-radius:8px;padding:7px 18px;font-size:13px;cursor:pointer">关闭</button></div>' +
+  '</div>';
+document.body.appendChild(__prog);
+const __$ = id => document.getElementById(id);
+function __fmt(b){
+  if(!b) return '0 KB';
+  return b > 1048576 ? (b/1048576).toFixed(1) + ' MB' : Math.round(b/1024) + ' KB';
+}
+function __setP(ratio, got, total){
+  __$('__dlB').style.width = Math.round(ratio*100) + '%';
+  __$('__dlP').textContent = Math.round(ratio*100) + '%'
+    + '　' + __fmt(got) + (total ? ' / ' + __fmt(total) : '');
+}
+
+async function __doDownload(e){
+  if(e) e.preventDefault();
+  __prog.style.display = 'flex';
+  __$('__dlT').textContent = '正在下载…';
+  __$('__dlC').style.display = 'none';
+  __setP(0, 0, 0);
+  try{
+    /* 相对路径 = 同源，不会被跨域拦截，进度条可正常工作 */
+    const res = await fetch(APK, { cache:'no-store' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const total = +(res.headers.get('content-length') || 0);
+    const reader = res.body.getReader();
+    const chunks = []; let got = 0;
+    for(;;){
+      const { done, value } = await reader.read();
+      if(done) break;
+      chunks.push(value); got += value.length;
+      __setP(total ? got/total : Math.min(got/(50*1048576), 0.9), got, total);
+    }
+    const blob = new Blob(chunks, { type:'application/vnd.android.package-archive' });
+    const url  = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = APK_NAME; a.style.display = 'none';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    __$('__dlT').textContent = '下载完成，请安装';
+    __setP(1, got, got);
+  }catch(err){
+    /* 兜底：直接触发下载（同源下几乎不会走到这里） */
+    __$('__dlT').textContent = '正在下载…';
+    __$('__dlP').textContent = '请等待浏览器下载完成';
+    const a = document.createElement('a');
+    a.href = APK; a.download = APK_NAME; a.style.display = 'none';
+    document.body.appendChild(a); a.click(); a.remove();
+  }finally{
+    __$('__dlC').style.display = 'block';
+  }
+}
+__$('__dlC').querySelector('button').onclick = () => { __prog.style.display = 'none'; };
+__prog.addEventListener('click', e => { if(e.target === __prog) __prog.style.display = 'none'; });
+
+['dlTop','dlHero','dlFoot'].forEach(id => {
+  const a = document.getElementById(id);
+  if(a){
+    a.href = APK;
+    a.setAttribute('download', APK_NAME);
+    a.addEventListener('click', __doDownload);
+  }
+});
+})();
+</script>
+</body>
+</html>
