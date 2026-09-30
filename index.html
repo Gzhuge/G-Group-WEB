@@ -1064,8 +1064,8 @@ html[data-perf="low"] .hero h1,html[data-perf="low"] .cta h2{text-shadow:none}
   </a>
   <nav class="topnav">
     <a href="#showcase">产品演示</a>
-    <a href="detail.html">功能文档</a>
     <a href="#virtues">核心功能</a>
+    <a href="#detail">功能详情</a>
     <a href="#modes">发言模式</a>
     <a href="#spec">技术规格</a>
     <a href="#faq">常见问题</a>
@@ -1253,6 +1253,94 @@ html[data-perf="low"] .hero h1,html[data-perf="low"] .cta h2{text-shadow:none}
     </div>
   </section>
 
+
+  <!-- ══════════ 02 · 功能详情 ══════════ -->
+  <section id="detail">
+    <div class="wrap">
+      <span class="ghost" data-speed="0.05">02</span>
+      <svg class="brush-div" viewBox="0 0 620 24" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M10 12 C 100 19, 170 4, 260 12 C 340 19, 400 6, 480 12 C 540 16, 580 8, 610 12"/>
+      </svg>
+      <div class="chap reveal">
+        <span class="chap-no">02</span>
+        <h2>功能详情<small>IN DETAIL</small></h2>
+        <p class="chap-lead">六大模块逐一介绍。带「看第 X 幕」的，点一下直接跳到上面那段动画的对应场景。</p>
+      </div>
+      <div class="chapters">
+        <article class="chapter reveal">
+          <header class="ch-head">
+            <span class="vol">01 · ENGINE</span>
+            <h3>群聊引擎</h3>
+            <button class="ch-jump" data-scene="1">看第 01 幕 · 群聊</button>
+          </header>
+          <ul class="ch-list">
+            <li><span><b>五种发言模式</b>：全员必须回复 / 全员选择回复 / 自由讨论（无限轮询）/ 按需发言 / 群主意愿。</span></li>
+            <li><span><b>两种回复节奏</b>：顺序（逐个接话，话题连贯）或同时（并行回复，互不等待）。</span></li>
+            <li><span><b>随时停止</b>：发送键可中止当前正在输入的所有成员，已生成的半截内容保留。</span></li>
+            <li><span><b>@ 提及</b>：任何模式下被 @ 的成员强制优先发言，兼容全角＠。</span></li>
+          </ul>
+        </article>
+        <article class="chapter reveal">
+          <header class="ch-head">
+            <span class="vol">02 · MEMORY</span>
+            <h3>记忆与上下文</h3>
+            <button class="ch-jump" data-scene="3">看第 03 幕 · 功能集锦</button>
+          </header>
+          <ul class="ch-list">
+            <li><span><b>群公共记忆</b>：整个群压缩后共用同一份上下文，所有成员看到的世界一致。</span></li>
+            <li><span><b>成员个人记忆</b>：被 @、主动回复、被分配的任务自动归档，仅该成员可见。</span></li>
+            <li><span><b>触发方式</b>：不启用 / 自动（超阈值自动总结）/ 手动（在 Token 面板触发）；阈值与保留条数均可调。</span></li>
+            <li><span><b>Token 面板</b>：实时估算群聊与每个成员的 Token 占用，超标红色提示。</span></li>
+          </ul>
+        </article>
+        <article class="chapter reveal">
+          <header class="ch-head">
+            <span class="vol">03 · PROTOCOL</span>
+            <h3>供应商与模型</h3>
+            <button class="ch-jump" data-scene="3">看第 03 幕 · 思考档位</button>
+          </header>
+          <ul class="ch-list">
+            <li><span><b>支持协议</b>：OpenAI 兼容 / Anthropic Claude / Google Gemini。</span></li>
+            <li><span><b>模型能力可勾选</b>：思考档位、视觉、原生联网、视频、工具调用。</span></li>
+            <li><span><b>思考档位三协议适配</b>：中文档（低/中/高）或数字档（如 8192）皆可。</span></li>
+            <li><span><b>一键拉取模型列表</b>；端点支持「自动补全」或「手填完整 URL」。</span></li>
+          </ul>
+        </article>
+        <article class="chapter reveal">
+          <header class="ch-head">
+            <span class="vol">04 · SEARCH</span>
+            <h3>联网搜索</h3>
+            <button class="ch-jump" data-scene="3">看第 03 幕 · 联网搜索</button>
+          </header>
+          <ul class="ch-list">
+            <li><span>基于 Bing 搜索，<b>无需申请 API Key</b>，在输入栏按消息开关。</span></li>
+          </ul>
+        </article>
+        <article class="chapter reveal">
+          <header class="ch-head">
+            <span class="vol">05 · AESTHETICS</span>
+            <h3>外观与体验</h3>
+            <button class="ch-jump" data-scene="4">看第 04 幕 · 昼夜</button>
+          </header>
+          <ul class="ch-list">
+            <li><span>亮色「暖纸」/ 暗色「墨夜」两套配色，跟随系统或手动指定。</span></li>
+            <li><span>无渐变、无高饱和色，以<b>暖灰纸面 + 墨黑主色</b>构建克制层级。</span></li>
+            <li><span>流畅动效：多档弹簧规格（回弹/阻尼/果冻弹），消息入场、列表错峰浮现、底栏跟手吸附。</span></li>
+          </ul>
+        </article>
+        <article class="chapter reveal">
+          <header class="ch-head">
+            <span class="vol">06 · PRIVACY</span>
+            <h3>隐私与数据</h3>
+          </header>
+          <ul class="ch-list">
+            <li><span>全部数据存于手机本地（Room 数据库），<b>不上传云端、不做账号体系</b>。</span></li>
+            <li><span>可一键清除所有数据。</span></li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
 
   <!-- ══════════ 03 · 发言模式 ══════════ -->
   <section id="modes">
@@ -2404,8 +2492,8 @@ const pmark = document.getElementById('pmark');
 const ghosts = Array.from(document.querySelectorAll('.ghost'));
 /* 进度卷轴上的分节编号 */
 const SECTIONS = [
-  ['hero','G'], ['showcase','0'], ['virtues','1'], ['modes','2'],
-  ['spec','3'], ['faq','4'], ['contact','5'], ['community','6'], ['download','↓']
+  ['hero','G'], ['showcase','0'], ['virtues','1'], ['detail','2'], ['modes','3'],
+  ['spec','4'], ['faq','5'], ['contact','6'], ['community','7'], ['download','↓']
 ].map(([id, ch]) => ({ top: (document.getElementById(id) || { offsetTop: 0 }).offsetTop, ch }))
  .sort((a, b) => a.top - b.top);
 let lastMark = '';
